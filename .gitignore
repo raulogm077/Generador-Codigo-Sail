@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# SO
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Settings locales de proyecto (nunca van al repo)
+.claude/*.local.md
+**/.claude/*.local.md

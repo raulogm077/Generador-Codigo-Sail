@@ -1,0 +1,7 @@
+*.swp
+.claude/.DS_Store
+.DS_Store
+/.vscode
+
+# Local validation scripts
+validate_sail.py

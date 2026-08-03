@@ -1,0 +1,1384 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "SAIL Layout Components - Page structure and container components",
+  "version": "2.4.0",
+  "sharedParameters": {
+    "universalLayouts": {
+      "description": "Parameters common to all layout components",
+      "showWhen": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Determines whether the layout is displayed on the interface"
+      }
+    }
+  },
+  "components": {
+    "a!formLayout": {
+      "description": "Top-level form layout with optional header, contents, and buttons",
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "titleBar": {
+          "type": "Text|CardLayout|HeaderTemplate"
+        },
+        "isTitleBarFixed": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "showTitleBarDivider": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "validValues": [
+            "WHITE",
+            "TRANSPARENT",
+            "CHARCOAL_SCHEME",
+            "NAVY_SCHEME",
+            "PLUM_SCHEME"
+          ],
+          "acceptsHexColors": true,
+          "default": "WHITE"
+        },
+        "contents": {
+          "type": "Any Type Array"
+        },
+        "contentsWidth": {
+          "type": "Text",
+          "validValues": [
+            "EXTRA_NARROW",
+            "NARROW",
+            "MEDIUM",
+            "WIDE",
+            "FULL"
+          ],
+          "default": "NARROW"
+        },
+        "focusOnFirstInput": {
+          "type": "Boolean",
+          "default": true
+        },
+        "buttons": {
+          "type": "Button Layout"
+        },
+        "isButtonFooterFixed": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "showButtonDivider": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "validations": {
+          "type": "Text/Validation Message"
+        },
+        "validationGroup": {
+          "type": "Text/Validation Message Array"
+        }
+      }
+    },
+    "a!headerContentLayout": {
+      "description": "General purpose page layout with header (optional) and content sections",
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "header": {
+          "type": "Any Type",
+          "description": "Billboard, card, or list of billboards/cards"
+        },
+        "contents": {
+          "type": "Any Type Array"
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "validValues": [
+            "WHITE",
+            "TRANSPARENT"
+          ],
+          "acceptsHexColors": true,
+          "default": "WHITE"
+        },
+        "contentsPadding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        },
+        "isHeaderFixed": {
+          "type": "Boolean",
+          "description": "Whether header stays at top when scrolling"
+        }
+      }
+    },
+    "a!paneLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "panes": {
+          "type": "List of a!pane",
+          "required": true
+        },
+        "showPaneDividers": {
+          "type": "Boolean",
+          "default": true
+        }
+      },
+      "specialNote": "At least one pane must have width: \"AUTO\" for fluid layout",
+      "description": "2-3 full-height vertical panes with independent scrolling"
+    },
+    "a!pane": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "contents": {
+          "type": "Any Type"
+        },
+        "width": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "EXTRA_NARROW",
+            "NARROW",
+            "NARROW_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "WIDE",
+            "WIDE_PLUS"
+          ],
+          "default": "AUTO"
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "acceptsHexColors": true
+        },
+        "padding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Individual pane within paneLayout"
+    },
+    "a!wizardLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "titleBar": {
+          "type": "Text|CardLayout|HeaderTemplate"
+        },
+        "isTitleBarFixed": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "showTitleBarDivider": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "validValues": [
+            "WHITE",
+            "TRANSPARENT",
+            "CHARCOAL_SCHEME",
+            "NAVY_SCHEME",
+            "PLUM_SCHEME"
+          ],
+          "acceptsHexColors": true,
+          "default": "WHITE"
+        },
+        "steps": {
+          "type": "List of a!wizardStep",
+          "required": true
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "DOT_VERTICAL",
+            "DOT_HORIZONTAL",
+            "CHEVRON_VERTICAL",
+            "CHEVRON_HORIZONTAL",
+            "LINE_VERTICAL",
+            "LINE_HORIZONTAL",
+            "MINIMAL"
+          ],
+          "default": "DOT_VERTICAL"
+        },
+        "contentsWidth": {
+          "type": "Text",
+          "validValues": [
+            "EXTRA_NARROW",
+            "NARROW",
+            "MEDIUM",
+            "WIDE",
+            "FULL"
+          ],
+          "default": "FULL"
+        },
+        "showStepHeadings": {
+          "type": "Boolean",
+          "default": true
+        },
+        "focusOnFirstInput": {
+          "type": "Boolean",
+          "default": true
+        },
+        "primaryButtons": {
+          "type": "List of ButtonWidget"
+        },
+        "secondaryButtons": {
+          "type": "List of ButtonWidget"
+        },
+        "isButtonFooterFixed": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        },
+        "showButtonDivider": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Default: false (true in dialogs)"
+        }
+      },
+      "description": "Multi-step form layout with automatic navigation and progress indicators"
+    },
+    "a!wizardStep": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "label": {
+          "type": "Text",
+          "required": true
+        },
+        "contents": {
+          "type": "Any Type",
+          "required": true
+        },
+        "disableNextButton": {
+          "type": "Boolean",
+          "default": false
+        },
+        "validations": {
+          "type": "List of Text"
+        }
+      },
+      "description": "Individual step within wizardLayout"
+    },
+    "a!boxLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "label": {
+          "type": "Text",
+          "description": "Box title"
+        },
+        "contents": {
+          "type": "Any Type Array"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "ACCENT",
+            "SUCCESS",
+            "INFO",
+            "WARN",
+            "ERROR"
+          ],
+          "acceptsHexColors": true,
+          "default": "STANDARD"
+        },
+        "isCollapsible": {
+          "type": "Boolean",
+          "default": false
+        },
+        "isInitiallyCollapsed": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "padding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "LESS"
+        },
+        "shape": {
+          "type": "Text",
+          "validValues": [
+            "SQUARED",
+            "SEMI_ROUNDED",
+            "ROUNDED"
+          ],
+          "default": "SQUARED"
+        },
+        "showBorder": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showShadow": {
+          "type": "Boolean",
+          "default": false
+        },
+        "labelSize": {
+          "type": "Text",
+          "validValues": [
+            "LARGE_PLUS",
+            "LARGE",
+            "MEDIUM_PLUS",
+            "MEDIUM",
+            "SMALL",
+            "EXTRA_SMALL"
+          ],
+          "default": "EXTRA_SMALL"
+        },
+        "labelHeadingTag": {
+          "type": "Text",
+          "validValues": [
+            "H1",
+            "H2",
+            "H3",
+            "H4",
+            "H5",
+            "H6"
+          ],
+          "description": "Dependent on label size"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        }
+      },
+      "description": "Content within a box outline with a title bar"
+    },
+    "a!columnsLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "columns": {
+          "type": "List of columnLayout",
+          "required": true
+        },
+        "alignVertical": {
+          "type": "Text",
+          "validValues": [
+            "TOP",
+            "MIDDLE",
+            "BOTTOM"
+          ],
+          "default": "TOP"
+        },
+        "spacing": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "NONE",
+            "DENSE",
+            "SPARSE"
+          ],
+          "default": "STANDARD"
+        },
+        "showDividers": {
+          "type": "Boolean",
+          "default": false
+        },
+        "stackWhen": {
+          "type": "List of Text",
+          "validValues": [
+            "PHONE",
+            "TABLET_PORTRAIT",
+            "TABLET_LANDSCAPE",
+            "DESKTOP",
+            "DESKTOP_WIDE",
+            "NEVER"
+          ],
+          "default": "PHONE"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "specialNote": "At least one column must have width: \"AUTO\" for proper layout distribution",
+      "description": "Horizontal column arrangement"
+    },
+    "a!columnLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "contents": {
+          "type": "Any Type"
+        },
+        "width": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "EXTRA_NARROW",
+            "NARROW",
+            "NARROW_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "WIDE",
+            "WIDE_PLUS",
+            "1X",
+            "2X",
+            "3X",
+            "4X",
+            "5X",
+            "6X",
+            "7X",
+            "8X",
+            "9X",
+            "10X"
+          ],
+          "default": "AUTO"
+        }
+      },
+      "description": "Single column within columns layout"
+    },
+    "a!sideBySideLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "items": {
+          "type": "List of sideBySideItem",
+          "required": true
+        },
+        "alignVertical": {
+          "type": "Text",
+          "validValues": [
+            "TOP",
+            "MIDDLE",
+            "BOTTOM"
+          ],
+          "default": "TOP"
+        },
+        "spacing": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "NONE",
+            "DENSE",
+            "SPARSE"
+          ],
+          "default": "STANDARD"
+        },
+        "stackWhen": {
+          "type": "List of Text",
+          "validValues": [
+            "PHONE",
+            "TABLET_PORTRAIT",
+            "TABLET_LANDSCAPE",
+            "DESKTOP_NARROW",
+            "DESKTOP",
+            "DESKTOP_WIDE",
+            "NEVER"
+          ],
+          "default": "NEVER"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "specialNote": "NEVER nest sideBySideLayouts inside sideBySideItems. NEVER put arrays of components or layout components in sideBySideItems - only single components allowed",
+      "description": "Side-by-side component arrangement (like flex)"
+    },
+    "a!sideBySideItem": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "item": {
+          "type": "Single component",
+          "required": true
+        },
+        "width": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "MINIMIZE",
+            "1X",
+            "2X",
+            "3X",
+            "4X",
+            "5X",
+            "6X",
+            "7X",
+            "8X",
+            "9X",
+            "10X"
+          ],
+          "default": "AUTO"
+        }
+      },
+      "specialNote": "Can ONLY contain single components - NEVER arrays of components or layout components (columnsLayout, cardLayout, sideBySideLayout, etc.)",
+      "description": "Item within side-by-side layout"
+    },
+    "a!cardLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "contents": {
+          "type": "Any Type"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "TRANSPARENT",
+            "STANDARD",
+            "ACCENT",
+            "SUCCESS",
+            "INFO",
+            "WARN",
+            "ERROR",
+            "CHARCOAL_SCHEME",
+            "NAVY_SCHEME",
+            "PLUM_SCHEME"
+          ],
+          "acceptsHexColors": true,
+          "supportsTransparency": true,
+          "description": "Card background color. Accepts enumerated values or hex colors with optional alpha channel for transparency (#RRGGBBAA where AA is 00-FF)"
+        },
+        "shape": {
+          "type": "Text",
+          "validValues": [
+            "SQUARED",
+            "SEMI_ROUNDED",
+            "ROUNDED"
+          ]
+        },
+        "padding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "EXTRA_SHORT",
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL",
+            "AUTO"
+          ]
+        },
+        "link": {
+          "type": "a!dynamicLink"
+        },
+        "decorativeBarPosition": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "TOP",
+            "BOTTOM",
+            "START",
+            "END"
+          ]
+        },
+        "decorativeBarColor": {
+          "type": "Text",
+          "validValues": [
+            "ACCENT",
+            "POSITIVE",
+            "WARN",
+            "NEGATIVE"
+          ],
+          "acceptsHexColors": true
+        },
+        "borderColor": {
+          "type": "Text",
+          "validValues": [
+            "ACCENT",
+            "POSITIVE",
+            "WARN",
+            "NEGATIVE"
+          ],
+          "acceptsHexColors": true
+        },
+        "showBorder": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showShadow": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Content within a styled card with optional border, shadow, and background color"
+    },
+    "a!cardGroupLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "cards": {
+          "type": "Any Type"
+        },
+        "cardWidth": {
+          "type": "Text",
+          "validValues": [
+            "EXTRA_NARROW",
+            "NARROW",
+            "NARROW_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "WIDE",
+            "WIDE_PLUS",
+            "EXTRA_WIDE"
+          ]
+        },
+        "cardHeight": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "EXTRA_SHORT",
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL"
+          ]
+        },
+        "spacing": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "NONE",
+            "DENSE",
+            "SPARSE"
+          ]
+        },
+        "fillContainer": {
+          "type": "Boolean"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "JUSTIFIED",
+            "COLLAPSED"
+          ]
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Group of cards with automatic responsive flow"
+    },
+    "a!sectionLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "label": {
+          "type": "Text",
+          "description": "Section heading"
+        },
+        "contents": {
+          "type": "Any Type"
+        },
+        "validations": {
+          "type": "List of Variant"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Text without spaces"
+        },
+        "isCollapsible": {
+          "type": "Boolean",
+          "default": false,
+          "description": "When true, users can click a caret to expand/collapse section contents"
+        },
+        "isInitiallyCollapsed": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "labelIcon": {
+          "type": "Text",
+          "description": "Icon names"
+        },
+        "iconAltText": {
+          "type": "Text"
+        },
+        "labelSize": {
+          "type": "Text",
+          "validValues": [
+            "LARGE_PLUS",
+            "LARGE",
+            "MEDIUM_PLUS",
+            "MEDIUM",
+            "SMALL",
+            "EXTRA_SMALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "labelHeadingTag": {
+          "type": "Text",
+          "validValues": [
+            "H1",
+            "H2",
+            "H3",
+            "H4",
+            "H5",
+            "H6"
+          ],
+          "description": "Semantic/accessibility heading level"
+        },
+        "labelColor": {
+          "type": "Text",
+          "validValues": [
+            "ACCENT",
+            "STANDARD",
+            "POSITIVE",
+            "NEGATIVE",
+            "SECONDARY"
+          ],
+          "acceptsHexColors": true,
+          "default": "ACCENT"
+        },
+        "divider": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "ABOVE",
+            "BELOW"
+          ],
+          "default": "NONE"
+        },
+        "dividerColor": {
+          "type": "Text",
+          "validValues": [
+            "SECONDARY",
+            "STANDARD",
+            "ACCENT"
+          ],
+          "acceptsHexColors": true,
+          "default": "SECONDARY"
+        },
+        "dividerWeight": {
+          "type": "Text",
+          "validValues": [
+            "THIN",
+            "MEDIUM",
+            "THICK"
+          ],
+          "default": "THIN"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "description": "Section with title and optionally collapsible content"
+    },
+    "a!billboardLayout": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "backgroundMedia": {
+          "type": "Any Type",
+          "description": "a!documentImage, a!userImage, a!webImage, a!webVideo"
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "acceptsHexColors": true,
+          "default": "#f0f0f0",
+          "description": "Hex codes with optional transparency (00-FF)"
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "EXTRA_SHORT",
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL",
+            "AUTO"
+          ],
+          "default": "MEDIUM"
+        },
+        "overlay": {
+          "type": "a!fullOverlay | a!barOverlay | a!columnOverlay",
+          "specialNote": "Must use a!fullOverlay(), a!barOverlay(), or a!columnOverlay() - cannot accept components directly"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "backgroundMediaPositionHorizontal": {
+          "type": "Text",
+          "validValues": [
+            "LEFT",
+            "CENTER",
+            "RIGHT"
+          ],
+          "default": "CENTER"
+        },
+        "backgroundMediaPositionVertical": {
+          "type": "Text",
+          "validValues": [
+            "TOP",
+            "MIDDLE",
+            "BOTTOM"
+          ],
+          "default": "MIDDLE"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "description": "Background image or video with optional overlay content"
+    },
+    "a!fullOverlay": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "alignVertical": {
+          "type": "Text",
+          "validValues": [
+            "TOP",
+            "MIDDLE",
+            "BOTTOM"
+          ]
+        },
+        "contents": {
+          "type": "Any Type"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "DARK",
+            "SEMI_DARK",
+            "NONE",
+            "SEMI_LIGHT",
+            "LIGHT"
+          ]
+        },
+        "padding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Full overlay completely covering entire billboard"
+    },
+    "a!barOverlay": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "position": {
+          "type": "Text",
+          "validValues": [
+            "TOP",
+            "MIDDLE",
+            "BOTTOM"
+          ]
+        },
+        "contents": {
+          "type": "Any Type"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "DARK",
+            "SEMI_DARK",
+            "NONE",
+            "SEMI_LIGHT",
+            "LIGHT"
+          ]
+        },
+        "padding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Horizontal bar overlay positioned at top, middle, or bottom of billboard"
+    },
+    "a!columnOverlay": {
+      "category": "layout",
+      "inherits": [
+        "universalLayouts"
+      ],
+      "parameters": {
+        "alignVertical": {
+          "type": "Text",
+          "validValues": [
+            "TOP",
+            "MIDDLE",
+            "BOTTOM"
+          ]
+        },
+        "position": {
+          "type": "Text",
+          "validValues": [
+            "START",
+            "CENTER",
+            "END"
+          ]
+        },
+        "width": {
+          "type": "Text",
+          "validValues": [
+            "NARROW",
+            "MEDIUM",
+            "WIDE"
+          ]
+        },
+        "contents": {
+          "type": "Any Type"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "DARK",
+            "SEMI_DARK",
+            "NONE",
+            "SEMI_LIGHT",
+            "LIGHT"
+          ]
+        },
+        "padding": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Vertical column overlay positioned at left, middle, or right of billboard"
+    },
+    "a!tabLayout": {
+      "category": "layout",
+      "description": "Displays content organized into a set of selectable tabs. Use a!tabItem() to define each tab. By default ALL tab contents evaluate on page load; defer heavy tabs with a!tabItem(loadBehavior: \"ON_TAB_SELECT\") (26.6+) or async loading. Cannot be used inside a!gridField, a!gridLayout, or a!sideBySideLayout.",
+      "inherits": [],
+      "parameters": {
+        "tabs": {
+          "type": "List of TabItem",
+          "description": "Tabs to display, as a list of a!tabItem().",
+          "required": true
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        },
+        "highlightColor": {
+          "type": "Text",
+          "description": "Highlight color of the selected tab. Valid: hex (with optional transparency 00-FF) or 'ACCENT' (default).",
+          "validValues": [
+            "ACCENT"
+          ],
+          "default": "ACCENT",
+          "acceptsHexColors": true,
+          "supportsTransparency": true
+        },
+        "contentsPadding": {
+          "type": "Text",
+          "description": "Space between tab edges and contents.",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        },
+        "selectedTab": {
+          "type": "Text or Integer",
+          "introducedIn": "26.6",
+          "description": "Sets/tracks the active tab by index (starting at 1) or by a!tabItem id. Use a variable; pair with a URL-parameter rule input for shareable tab links. When null, the first visible tab is active."
+        },
+        "selectedTabSaveInto": {
+          "type": "Save Array",
+          "introducedIn": "26.6",
+          "description": "Variables updated with the active tab's index or id when the user changes tabs."
+        }
+      },
+      "specialNote": "Cannot be nested inside a!sideBySideLayout, editable grids (a!gridLayout), or read-only grids (a!gridField). The tab layout and tab items are transparent — they use the color of their container. Input errors block submission; error icon appears next to the tab label, and a validation icon appears on the navigation arrow when the errored tab isn't visible.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Tab_Layout.html"
+    },
+    "a!tabItem": {
+      "category": "layout",
+      "description": "Displays the components and layouts of a single tab within a!tabLayout. Use only inside a!tabLayout.tabs.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text",
+          "description": "Text displayed as the tab title.",
+          "required": true
+        },
+        "icon": {
+          "type": "Text",
+          "description": "Optional icon displayed next to the label. Use any valid icon key (validate via rich-text-icon-aliases.md)."
+        },
+        "contents": {
+          "type": "Any Type",
+          "description": "Components and layouts to display when the tab is selected."
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "validations": {
+          "type": "List of Variant",
+          "description": "Validation errors (text array or a!validationMessage()). Display above contents of the active tab and as an icon next to the tab title."
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "id": {
+          "type": "Text",
+          "introducedIn": "26.6",
+          "description": "Stable identifier for use with tabLayout.selectedTab. Must be unique; if any tab has an id, ALL tabs need one. REQUIRED when tabs are shown/hidden dynamically with showWhen (indexes shift)."
+        },
+        "loadBehavior": {
+          "type": "Text",
+          "validValues": [
+            "ON_LOAD",
+            "ON_TAB_SELECT"
+          ],
+          "default": "ON_LOAD",
+          "introducedIn": "26.6",
+          "description": "ON_TAB_SELECT defers evaluation until the tab becomes active (good for expensive queries) BUT field validations inside are skipped until the user opens the tab - never use it on tabs containing validated inputs. Contents are cached until a reevaluation."
+        }
+      },
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Tab_Item.html"
+    },
+    "a!headerTemplateImage": {
+      "category": "layout",
+      "description": "Title bar template that displays a prominent header with a background color at the top of a form or wizard. Spans the full width and includes a decorative image next to the title.",
+      "inherits": [],
+      "parameters": {
+        "title": {
+          "type": "Text",
+          "description": "Text displayed as the header title.",
+          "required": true
+        },
+        "secondaryText": {
+          "type": "Text",
+          "description": "Optional text displayed below the title."
+        },
+        "titleColor": {
+          "type": "Text",
+          "description": "Title text color. Valid: hex or STANDARD/ACCENT/SECONDARY.",
+          "validValues": [
+            "STANDARD",
+            "ACCENT",
+            "SECONDARY"
+          ],
+          "default": "STANDARD",
+          "acceptsHexColors": true
+        },
+        "secondaryTextColor": {
+          "type": "Text",
+          "description": "Secondary text color. Valid: hex or STANDARD/ACCENT/SECONDARY.",
+          "validValues": [
+            "STANDARD",
+            "ACCENT",
+            "SECONDARY"
+          ],
+          "default": "STANDARD",
+          "acceptsHexColors": true
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "description": "Title bar background. Valid: hex (with optional transparency 00-FF) or ACCENT/WHITE/CHARCOAL_SCHEME/NAVY_SCHEME/PLUM_SCHEME.",
+          "validValues": [
+            "ACCENT",
+            "WHITE",
+            "CHARCOAL_SCHEME",
+            "NAVY_SCHEME",
+            "PLUM_SCHEME"
+          ],
+          "default": "ACCENT",
+          "acceptsHexColors": true,
+          "supportsTransparency": true
+        },
+        "image": {
+          "type": "Any Type",
+          "description": "Image next to title. Use a!webImage(), a!userImage(), or a!documentImage()."
+        },
+        "imageSize": {
+          "type": "Text",
+          "description": "Image size in the title bar.",
+          "validValues": [
+            "SMALL_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS"
+          ],
+          "default": "SMALL_PLUS"
+        }
+      },
+      "specialNote": "Use only inside a!formLayout(titleBar) or a!wizardLayout(titleBar). Image is hidden on smaller screens (responsive). Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Header_Template_Image.html"
+    }
+  }
+}

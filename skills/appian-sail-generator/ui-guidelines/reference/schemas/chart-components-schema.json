@@ -1,0 +1,1472 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "SAIL Chart Components - Chart types and chart configuration components",
+  "version": "3.1.0",
+  "sharedParameters": {
+    "allChartFields": {
+      "description": "Parameters common to all chart field components",
+      "label": {
+        "type": "Text",
+        "description": "Text to display as the field label"
+      },
+      "labelPosition": {
+        "type": "Text",
+        "validValues": [
+          "ABOVE",
+          "ADJACENT",
+          "JUSTIFIED",
+          "COLLAPSED"
+        ],
+        "default": "ABOVE",
+        "description": "Determines where the label appears. When set to COLLAPSED, the label is hidden and space is not reserved."
+      },
+      "instructions": {
+        "type": "Text",
+        "description": "Supplemental text about this field (displayed below the chart)"
+      },
+      "helpTooltip": {
+        "type": "Text",
+        "description": "Displays a help icon with the specified text as a tooltip (max 500 characters). Hidden when labelPosition is COLLAPSED."
+      },
+      "showWhen": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Determines whether the component is displayed on the interface. When false, the component is not evaluated."
+      },
+      "accessibilityText": {
+        "type": "Text",
+        "description": "Additional text to be announced by screen readers. Used only for accessibility; produces no visible change."
+      },
+      "marginAbove": {
+        "type": "Text",
+        "validValues": [
+          "NONE",
+          "EVEN_LESS",
+          "LESS",
+          "STANDARD",
+          "MORE",
+          "EVEN_MORE"
+        ],
+        "default": "NONE"
+      },
+      "marginBelow": {
+        "type": "Text",
+        "validValues": [
+          "NONE",
+          "EVEN_LESS",
+          "LESS",
+          "STANDARD",
+          "MORE",
+          "EVEN_MORE"
+        ],
+        "default": "STANDARD"
+      }
+    },
+    "chartDataSource": {
+      "description": "Parameters for chart data configuration. Use either categories/series OR data/config approach (not both).",
+      "data": {
+        "type": "Any Type",
+        "description": "Record type reference or a!recordData() for record-powered charts. Limited to 5,000 rows maximum."
+      },
+      "config": {
+        "type": "Chart Config",
+        "description": "Chart configuration function (e.g., a!columnChartConfig(), a!pieChartConfig()). Used with record data."
+      }
+    },
+    "chartAxes": {
+      "description": "Axis configuration for charts with X and Y axes (column, bar, line, area)",
+      "xAxisTitle": {
+        "type": "Text",
+        "description": "Title for the X-axis"
+      },
+      "yAxisTitle": {
+        "type": "Text",
+        "description": "Title for the Y-axis"
+      },
+      "yAxisMin": {
+        "type": "Number (Decimal)",
+        "description": "Minimum value for the Y-axis"
+      },
+      "yAxisMax": {
+        "type": "Number (Decimal)",
+        "description": "Maximum value for the Y-axis"
+      },
+      "xAxisStyle": {
+        "type": "Text",
+        "validValues": [
+          "STANDARD",
+          "NONE"
+        ],
+        "default": "STANDARD",
+        "description": "Determines X-axis display style"
+      },
+      "yAxisStyle": {
+        "type": "Text",
+        "validValues": [
+          "STANDARD",
+          "MINIMAL",
+          "NONE"
+        ],
+        "default": "STANDARD",
+        "description": "Determines Y-axis display style"
+      },
+      "allowDecimalAxisLabels": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Allows decimal values in axis labels"
+      }
+    },
+    "chartDisplay": {
+      "description": "Common display options for charts",
+      "showLegend": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Determines whether the legend is displayed"
+      },
+      "showDataLabels": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Determines if data values are displayed on the chart"
+      },
+      "showTooltips": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Determines whether tooltips display on hover"
+      },
+      "allowImageDownload": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Shows download button to save chart as image"
+      }
+    },
+    "chartRefresh": {
+      "description": "Auto-refresh parameters for charts with dynamic data",
+      "refreshAlways": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Refreshes chart after every user interaction and at each refresh interval"
+      },
+      "refreshAfter": {
+        "type": "List of Text",
+        "validValues": [
+          "RECORD_ACTION"
+        ],
+        "description": "Refreshes chart after specified events occur"
+      },
+      "refreshInterval": {
+        "type": "Number (Decimal)",
+        "validValues": [
+          "0.5",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "10",
+          "30",
+          "60"
+        ],
+        "description": "Time-based refresh interval in minutes. Null means no automatic refresh."
+      },
+      "refreshOnReferencedVarChange": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Refreshes chart when variables referenced in data parameter change"
+      },
+      "refreshOnVarChange": {
+        "type": "Any Type",
+        "description": "Single variable or list of variables that trigger chart refresh when changed"
+      },
+      "loadDataAsync": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Allows the interface to load without waiting for chart data. Chart displays loading indicator until data loads."
+      }
+    }
+  },
+  "components": {
+    "a!columnChartField": {
+      "category": "chart",
+      "inherits": [
+        "allChartFields",
+        "chartDataSource",
+        "chartAxes",
+        "chartDisplay",
+        "chartRefresh"
+      ],
+      "parameters": {
+        "categories": {
+          "type": "List of Variant",
+          "description": "Array of X-axis labels (Text, Date, or DateTime). Null items display as '[Category #]'. Required when not using data/config approach."
+        },
+        "series": {
+          "type": "List of ChartSeries",
+          "description": "Array of data series created with a!chartSeries(). Multiple series create grouped or stacked bars. Required when not using data/config approach."
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "MICRO",
+            "SHORT",
+            "MEDIUM",
+            "TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "colorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "CLASSIC",
+            "MIDNIGHT",
+            "OCEAN",
+            "MOSS",
+            "BERRY",
+            "PARACHUTE",
+            "RAINFOREST",
+            "SUNSET"
+          ],
+          "default": "RAINFOREST",
+          "description": "Color palette for chart. Accepts enumerated values or custom scheme via a!colorSchemeCustom()."
+        },
+        "stacking": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "NORMAL",
+            "PERCENT_TO_TOTAL"
+          ],
+          "default": "NONE",
+          "description": "NONE: grouped bars; NORMAL: stacked bars with values; PERCENT_TO_TOTAL: stacked bars as percentages"
+        },
+        "referenceLines": {
+          "type": "List of Variant",
+          "description": "Array of reference lines created with a!chartReferenceLine()"
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showDataLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showTooltips": {
+          "type": "Boolean"
+        },
+        "data": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Record type reference or a!recordData() for records-powered charts. When set, configure groupings/measures via the config parameter (or measure params for scatter) instead of categories/series."
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "recordDataOnly": true
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        },
+        "allowImageDownload": {
+          "type": "Boolean",
+          "default": false
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "xAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisMin": {
+          "type": "Number"
+        },
+        "yAxisMax": {
+          "type": "Number"
+        },
+        "showLegend": {
+          "type": "Boolean"
+        },
+        "allowDecimalAxisLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "xAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "NONE"
+          ]
+        },
+        "yAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "MINIMAL",
+            "NONE"
+          ]
+        },
+        "config": {
+          "type": "ColumnChartConfig",
+          "recordDataOnly": true,
+          "description": "Groupings/measures for records-powered charts, built with a!columnChartConfig(). Used together with the data parameter."
+        }
+      },
+      "description": "Vertical bars for data changes over time",
+      "notes": [
+        "Use categories/series OR data/config (not both)",
+        "Multiple series with stacking NONE produces grouped bars",
+        "Multiple series with stacking NORMAL produces single stacked bar per category",
+        "Record-powered charts limited to 5,000 rows",
+        "Incompatible with offline mobile, process reports, and autoscaling"
+      ]
+    },
+    "a!pieChartField": {
+      "category": "chart",
+      "inherits": [
+        "allChartFields",
+        "chartDataSource",
+        "chartDisplay",
+        "chartRefresh"
+      ],
+      "parameters": {
+        "series": {
+          "type": "List of PieChartSeries",
+          "description": "Array of data slices created with a!chartSeries(). Required when not using data/config approach."
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "SHORT",
+            "MEDIUM",
+            "TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "showAsPercentage": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Displays values as percentages instead of raw numbers"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "PIE",
+            "DONUT"
+          ],
+          "default": "PIE",
+          "description": "PIE: full circle; DONUT: circle with center cutout"
+        },
+        "seriesLabelStyle": {
+          "type": "Text",
+          "validValues": [
+            "ON_CHART",
+            "LEGEND",
+            "NONE"
+          ],
+          "default": "ON_CHART",
+          "description": "Determines where series labels are displayed"
+        },
+        "colorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "CLASSIC",
+            "MIDNIGHT",
+            "OCEAN",
+            "MOSS",
+            "BERRY",
+            "PARACHUTE",
+            "RAINFOREST",
+            "SUNSET"
+          ],
+          "default": "RAINFOREST",
+          "description": "Color palette for chart. Accepts enumerated values or custom scheme via a!colorSchemeCustom()."
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showDataLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showTooltips": {
+          "type": "Boolean"
+        },
+        "data": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Record type reference or a!recordData() for records-powered charts. When set, configure groupings/measures via the config parameter (or measure params for scatter) instead of categories/series."
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "recordDataOnly": true
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        },
+        "allowImageDownload": {
+          "type": "Boolean",
+          "default": false
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "config": {
+          "type": "PieChartConfig",
+          "recordDataOnly": true,
+          "description": "Groupings/measures for records-powered charts, built with a!pieChartConfig(). Used together with the data parameter."
+        }
+      },
+      "description": "Circular slices for parts of a whole",
+      "notes": [
+        "Use series OR data/config (not both)",
+        "DONUT style creates ring chart with empty center",
+        "Record-powered charts limited to 5,000 rows"
+      ],
+      "_notes": "Per Appian docs, pieChartField does NOT accept showLegend despite the schema's chartDisplay inheritance. Use seriesLabelStyle: 'LEGEND' | 'ON_CHART' | 'NONE' for legend control. The inherited showDataLabels and showTooltips ARE accepted."
+    },
+    "a!lineChartField": {
+      "category": "chart",
+      "inherits": [
+        "allChartFields",
+        "chartDataSource",
+        "chartAxes",
+        "chartDisplay",
+        "chartRefresh"
+      ],
+      "parameters": {
+        "categories": {
+          "type": "List of Variant",
+          "description": "Array of X-axis labels (Text, Date, or DateTime). Required when not using data/config approach."
+        },
+        "series": {
+          "type": "List of ChartSeries",
+          "description": "Array of data series created with a!chartSeries(). Each series creates a separate line. Required when not using data/config approach."
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "MICRO",
+            "SHORT",
+            "MEDIUM",
+            "TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "colorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "CLASSIC",
+            "MIDNIGHT",
+            "OCEAN",
+            "MOSS",
+            "BERRY",
+            "PARACHUTE",
+            "RAINFOREST",
+            "SUNSET"
+          ],
+          "default": "RAINFOREST",
+          "description": "Color palette for chart. Accepts enumerated values or custom scheme via a!colorSchemeCustom()."
+        },
+        "referenceLines": {
+          "type": "List of Variant",
+          "description": "Array of reference lines created with a!chartReferenceLine()"
+        },
+        "connectNulls": {
+          "type": "Boolean",
+          "default": false,
+          "description": "When true, connects points across null data values; when false, creates gaps in the line"
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showDataLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showTooltips": {
+          "type": "Boolean"
+        },
+        "data": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Record type reference or a!recordData() for records-powered charts. When set, configure groupings/measures via the config parameter (or measure params for scatter) instead of categories/series."
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "recordDataOnly": true
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        },
+        "allowImageDownload": {
+          "type": "Boolean",
+          "default": false
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "xAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisMin": {
+          "type": "Number"
+        },
+        "yAxisMax": {
+          "type": "Number"
+        },
+        "showLegend": {
+          "type": "Boolean"
+        },
+        "allowDecimalAxisLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "xAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "NONE"
+          ]
+        },
+        "yAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "MINIMAL",
+            "NONE"
+          ]
+        },
+        "config": {
+          "type": "LineChartConfig",
+          "recordDataOnly": true,
+          "description": "Groupings/measures for records-powered charts, built with a!lineChartConfig(). Used together with the data parameter."
+        }
+      },
+      "description": "Connected points for trends over time",
+      "notes": [
+        "Use categories/series OR data/config (not both)",
+        "connectNulls=false creates gaps for missing data points",
+        "Record-powered charts limited to 5,000 rows"
+      ]
+    },
+    "a!barChartField": {
+      "category": "chart",
+      "inherits": [
+        "allChartFields",
+        "chartDataSource",
+        "chartAxes",
+        "chartDisplay",
+        "chartRefresh"
+      ],
+      "parameters": {
+        "categories": {
+          "type": "List of Variant",
+          "description": "Array of Y-axis labels (Text, Date, or DateTime). Required when not using data/config approach."
+        },
+        "series": {
+          "type": "List of ChartSeries",
+          "description": "Array of data series created with a!chartSeries(). Multiple series create grouped or stacked bars. Required when not using data/config approach."
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "MICRO",
+            "SHORT",
+            "MEDIUM",
+            "TALL",
+            "AUTO"
+          ],
+          "default": "MEDIUM",
+          "description": "AUTO adjusts height based on number of categories"
+        },
+        "colorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "CLASSIC",
+            "MIDNIGHT",
+            "OCEAN",
+            "MOSS",
+            "BERRY",
+            "PARACHUTE",
+            "RAINFOREST",
+            "SUNSET"
+          ],
+          "default": "RAINFOREST",
+          "description": "Color palette for chart. Accepts enumerated values or custom scheme via a!colorSchemeCustom()."
+        },
+        "stacking": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "NORMAL",
+            "PERCENT_TO_TOTAL"
+          ],
+          "default": "NONE",
+          "description": "NONE: grouped bars; NORMAL: stacked bars with values; PERCENT_TO_TOTAL: stacked bars as percentages"
+        },
+        "referenceLines": {
+          "type": "List of Variant",
+          "description": "Array of reference lines created with a!chartReferenceLine()"
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showDataLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showTooltips": {
+          "type": "Boolean"
+        },
+        "data": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Record type reference or a!recordData() for records-powered charts. When set, configure groupings/measures via the config parameter (or measure params for scatter) instead of categories/series."
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "recordDataOnly": true
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        },
+        "allowImageDownload": {
+          "type": "Boolean",
+          "default": false
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "xAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisMin": {
+          "type": "Number"
+        },
+        "yAxisMax": {
+          "type": "Number"
+        },
+        "showLegend": {
+          "type": "Boolean"
+        },
+        "allowDecimalAxisLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "xAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "NONE"
+          ]
+        },
+        "yAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "MINIMAL",
+            "NONE"
+          ]
+        },
+        "config": {
+          "type": "BarChartConfig",
+          "recordDataOnly": true,
+          "description": "Groupings/measures for records-powered charts, built with a!barChartConfig(). Used together with the data parameter."
+        }
+      },
+      "description": "Horizontal bars for values at same time point",
+      "notes": [
+        "Use categories/series OR data/config (not both)",
+        "AUTO height useful for long category lists",
+        "Record-powered charts limited to 5,000 rows"
+      ]
+    },
+    "a!areaChartField": {
+      "category": "chart",
+      "inherits": [
+        "allChartFields",
+        "chartDataSource",
+        "chartAxes",
+        "chartDisplay",
+        "chartRefresh"
+      ],
+      "parameters": {
+        "categories": {
+          "type": "List of Variant",
+          "description": "Array of X-axis labels (Text, Date, or DateTime). Required when not using data/config approach."
+        },
+        "series": {
+          "type": "List of ChartSeries",
+          "description": "Array of data series created with a!chartSeries(). Each series creates a separate shaded area. Required when not using data/config approach."
+        },
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "MICRO",
+            "SHORT",
+            "MEDIUM",
+            "TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "colorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "CLASSIC",
+            "MIDNIGHT",
+            "OCEAN",
+            "MOSS",
+            "BERRY",
+            "PARACHUTE",
+            "RAINFOREST",
+            "SUNSET"
+          ],
+          "default": "RAINFOREST",
+          "description": "Color palette for chart. Accepts enumerated values or custom scheme via a!colorSchemeCustom()."
+        },
+        "stacking": {
+          "type": "Text",
+          "validValues": [
+            "NORMAL",
+            "PERCENT_TO_TOTAL",
+            "NONE"
+          ],
+          "default": "NORMAL",
+          "description": "NORMAL: stacked areas; PERCENT_TO_TOTAL: stacked as percentages; NONE: overlapping areas"
+        },
+        "referenceLines": {
+          "type": "List of Variant",
+          "description": "Array of reference lines created with a!chartReferenceLine()"
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showDataLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showTooltips": {
+          "type": "Boolean"
+        },
+        "data": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Record type reference or a!recordData() for records-powered charts. When set, configure groupings/measures via the config parameter (or measure params for scatter) instead of categories/series."
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "recordDataOnly": true
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        },
+        "allowImageDownload": {
+          "type": "Boolean",
+          "default": false
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "xAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisMin": {
+          "type": "Number"
+        },
+        "yAxisMax": {
+          "type": "Number"
+        },
+        "showLegend": {
+          "type": "Boolean"
+        },
+        "allowDecimalAxisLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "xAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "NONE"
+          ]
+        },
+        "yAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "MINIMAL",
+            "NONE"
+          ]
+        },
+        "config": {
+          "type": "AreaChartConfig",
+          "recordDataOnly": true,
+          "description": "Groupings/measures for records-powered charts, built with a!areaChartConfig(). Used together with the data parameter."
+        }
+      },
+      "description": "Area chart with shaded regions between line and axis",
+      "notes": [
+        "Use categories/series OR data/config (not both)",
+        "Default stacking is NORMAL (unlike column/bar which default to NONE)",
+        "Record-powered charts limited to 5,000 rows"
+      ]
+    },
+    "a!scatterChartField": {
+      "category": "chart",
+      "inherits": [
+        "allChartFields",
+        "chartDataSource",
+        "chartDisplay",
+        "chartRefresh"
+      ],
+      "parameters": {
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "MICRO",
+            "SHORT",
+            "MEDIUM",
+            "TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "colorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "CLASSIC",
+            "MIDNIGHT",
+            "OCEAN",
+            "MOSS",
+            "BERRY",
+            "PARACHUTE",
+            "RAINFOREST",
+            "SUNSET"
+          ],
+          "default": "RAINFOREST",
+          "description": "Color palette for chart. Accepts enumerated values or custom scheme via a!colorSchemeCustom()."
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showDataLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showTooltips": {
+          "type": "Boolean"
+        },
+        "data": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Record type reference or a!recordData() for records-powered charts. When set, configure groupings/measures via the config parameter (or measure params for scatter) instead of categories/series."
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "recordDataOnly": true
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        },
+        "allowImageDownload": {
+          "type": "Boolean",
+          "default": false
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "xAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisTitle": {
+          "type": "Text"
+        },
+        "yAxisMin": {
+          "type": "Number"
+        },
+        "yAxisMax": {
+          "type": "Number"
+        },
+        "showLegend": {
+          "type": "Boolean"
+        },
+        "allowDecimalAxisLabels": {
+          "type": "Boolean",
+          "default": false
+        },
+        "xAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "NONE"
+          ]
+        },
+        "yAxisStyle": {
+          "validValues": [
+            "STANDARD",
+            "MINIMAL",
+            "NONE"
+          ]
+        },
+        "xAxisMin": {
+          "type": "Number"
+        },
+        "xAxisMax": {
+          "type": "Number"
+        },
+        "primaryGrouping": {
+          "type": "Grouping",
+          "recordDataOnly": true,
+          "description": "a!grouping() - each group is one point."
+        },
+        "secondaryGrouping": {
+          "type": "Grouping",
+          "recordDataOnly": true
+        },
+        "xAxisMeasure": {
+          "type": "Measure",
+          "recordDataOnly": true,
+          "description": "a!measure() for the X value of each point."
+        },
+        "yAxisMeasure": {
+          "type": "Measure",
+          "recordDataOnly": true,
+          "description": "a!measure() for the Y value of each point."
+        },
+        "sort": {
+          "type": "List of SortInfo",
+          "recordDataOnly": true
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "recordDataOnly": true
+        },
+        "link": {
+          "type": "Any Type",
+          "recordDataOnly": true
+        }
+      },
+      "description": "Points showing relationship between two numerical values",
+      "notes": [
+        "Scatter charts ONLY work with a!recordData - cannot use categories/series approach",
+        "Requires data and config parameters with xAxisField and yAxisField",
+        "Record-powered charts limited to 5,000 rows"
+      ]
+    },
+    "a!columnChartConfig": {
+      "category": "chart-config",
+      "parameters": {
+        "primaryGrouping": {
+          "type": "Grouping",
+          "description": "Primary grouping created with a!grouping(). Determines X-axis categories."
+        },
+        "secondaryGrouping": {
+          "type": "Grouping",
+          "description": "Secondary grouping created with a!grouping(). Creates grouped or stacked series."
+        },
+        "measures": {
+          "type": "List of Measure",
+          "description": "Array of measures created with a!measure(). Defines values to display."
+        },
+        "sort": {
+          "type": "SortInfo",
+          "description": "Sort configuration created with a!sortInfo()"
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "description": "Maximum number of data points to display. Limited to 5,000."
+        },
+        "link": {
+          "type": "Any Type",
+          "description": "Link to execute when chart element is clicked"
+        },
+        "showIntervalsWithNoData": {
+          "type": "Boolean",
+          "description": "When true, shows time intervals with no data points"
+        }
+      },
+      "description": "Configuration for column chart with record data"
+    },
+    "a!barChartConfig": {
+      "category": "chart-config",
+      "parameters": {
+        "primaryGrouping": {
+          "type": "Grouping",
+          "description": "Primary grouping created with a!grouping(). Determines Y-axis categories."
+        },
+        "secondaryGrouping": {
+          "type": "Grouping",
+          "description": "Secondary grouping created with a!grouping(). Creates grouped or stacked series."
+        },
+        "measures": {
+          "type": "List of Measure",
+          "description": "Array of measures created with a!measure(). Defines values to display."
+        },
+        "sort": {
+          "type": "SortInfo",
+          "description": "Sort configuration created with a!sortInfo()"
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "description": "Maximum number of data points to display. Limited to 5,000."
+        },
+        "link": {
+          "type": "Any Type",
+          "description": "Link to execute when chart element is clicked"
+        },
+        "showIntervalsWithNoData": {
+          "type": "Boolean",
+          "description": "When true, shows time intervals with no data points"
+        }
+      },
+      "description": "Configuration for bar chart with record data"
+    },
+    "a!lineChartConfig": {
+      "category": "chart-config",
+      "parameters": {
+        "primaryGrouping": {
+          "type": "Grouping",
+          "description": "Primary grouping created with a!grouping(). Determines X-axis categories."
+        },
+        "secondaryGrouping": {
+          "type": "Grouping",
+          "description": "Secondary grouping created with a!grouping(). Creates multiple lines."
+        },
+        "measures": {
+          "type": "List of Measure",
+          "description": "Array of measures created with a!measure(). Defines values to display."
+        },
+        "sort": {
+          "type": "SortInfo",
+          "description": "Sort configuration created with a!sortInfo()"
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "description": "Maximum number of data points to display. Limited to 5,000."
+        },
+        "link": {
+          "type": "Any Type",
+          "description": "Link to execute when chart element is clicked"
+        },
+        "showIntervalsWithNoData": {
+          "type": "Boolean",
+          "description": "When true, shows time intervals with no data points"
+        }
+      },
+      "description": "Configuration for line chart with record data"
+    },
+    "a!areaChartConfig": {
+      "category": "chart-config",
+      "parameters": {
+        "primaryGrouping": {
+          "type": "Grouping",
+          "description": "Primary grouping created with a!grouping(). Determines X-axis categories."
+        },
+        "secondaryGrouping": {
+          "type": "Grouping",
+          "description": "Secondary grouping created with a!grouping(). Creates multiple areas."
+        },
+        "measures": {
+          "type": "List of Measure",
+          "description": "Array of measures created with a!measure(). Defines values to display."
+        },
+        "sort": {
+          "type": "SortInfo",
+          "description": "Sort configuration created with a!sortInfo()"
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "description": "Maximum number of data points to display. Limited to 5,000."
+        },
+        "link": {
+          "type": "Any Type",
+          "description": "Link to execute when chart element is clicked"
+        },
+        "showIntervalsWithNoData": {
+          "type": "Boolean",
+          "description": "When true, shows time intervals with no data points"
+        }
+      },
+      "description": "Configuration for area chart with record data"
+    },
+    "a!pieChartConfig": {
+      "category": "chart-config",
+      "parameters": {
+        "primaryGrouping": {
+          "type": "Grouping",
+          "description": "Primary grouping created with a!grouping(). Determines pie slices."
+        },
+        "measures": {
+          "type": "List of Measure",
+          "description": "Array of measures created with a!measure(). Defines slice values."
+        },
+        "sort": {
+          "type": "SortInfo",
+          "description": "Sort configuration created with a!sortInfo()"
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "description": "Maximum number of data points to display. Limited to 5,000."
+        },
+        "link": {
+          "type": "Any Type",
+          "description": "Link to execute when chart element is clicked"
+        }
+      },
+      "description": "Configuration for pie chart with record data",
+      "notes": [
+        "Pie charts do not support secondaryGrouping or showIntervalsWithNoData"
+      ]
+    },
+    "a!scatterChartConfig": {
+      "category": "chart-config",
+      "parameters": {
+        "xAxisField": {
+          "type": "Field Reference",
+          "required": true,
+          "description": "Record field reference for X-axis values"
+        },
+        "yAxisField": {
+          "type": "Field Reference",
+          "required": true,
+          "description": "Record field reference for Y-axis values"
+        },
+        "dataLimit": {
+          "type": "Integer",
+          "description": "Maximum number of data points to display. Limited to 5,000."
+        },
+        "link": {
+          "type": "Any Type",
+          "description": "Link to execute when chart element is clicked"
+        }
+      },
+      "description": "Configuration for scatter chart with record data",
+      "notes": [
+        "Scatter charts require both xAxisField and yAxisField",
+        "Does not support grouping, measures, or sort parameters"
+      ]
+    },
+    "a!colorSchemeCustom": {
+      "description": "Defines a custom list of colors to apply to any chart.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Chart_Custom_Color_Scheme_Component.html",
+      "parameters": {
+        "colors": {
+          "type": "List of Text",
+          "description": "List of hex colors. Example: { \"#FF0000\", \"#00FF00\", \"#0000FF\" }."
+        }
+      },
+      "_notes": "Use as the value of a chart's colorScheme parameter when the named schemes (CLASSIC, OCEAN, etc.) don't fit. Example: colorScheme: a!colorSchemeCustom(colors: { \"#3FB8AF\", \"#A9D78A\" })."
+    }
+  }
+}

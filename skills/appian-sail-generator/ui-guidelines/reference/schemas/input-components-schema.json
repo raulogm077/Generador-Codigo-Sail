@@ -1,0 +1,1553 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "SAIL Input Components - Form fields and user input components",
+  "version": "2.4.0",
+  "sharedParameters": {
+    "allInputFields": {
+      "description": "Parameters common to all input field components",
+      "label": {
+        "type": "Text",
+        "description": "Text to display as the field label"
+      },
+      "labelPosition": {
+        "type": "Text",
+        "validValues": [
+          "ABOVE",
+          "ADJACENT",
+          "JUSTIFIED",
+          "COLLAPSED"
+        ],
+        "default": "ABOVE"
+      },
+      "instructions": {
+        "type": "Text",
+        "description": "Supplemental text about this field (displayed below input)"
+      },
+      "helpTooltip": {
+        "type": "Text",
+        "description": "Displays a help icon with the specified text as a tooltip (max 500 characters)"
+      },
+      "placeholder": {
+        "type": "Text",
+        "description": "Text to display in the field when it is empty. Avoid using for instructions. Use to show expected input format, example values.",
+        "note": "Not available for: dateField, dateTimeField"
+      },
+      "required": {
+        "type": "Boolean",
+        "default": false
+      },
+      "requiredMessage": {
+        "type": "Text",
+        "description": "Custom error message to display when the field's value is required and not provided"
+      },
+      "readOnly": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Determines if the field should display as not editable"
+      },
+      "disabled": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Determines if the field should display as potentially editable but grayed out"
+      },
+      "value": {
+        "type": "Any Type",
+        "description": "Value displayed in the field (type varies by component)"
+      },
+      "saveInto": {
+        "type": "List of Save",
+        "description": "One or more variables that are updated when the user changes the value"
+      },
+      "validations": {
+        "type": "List of Text",
+        "description": "Validation errors to display below the field when the value is not null"
+      },
+      "validationGroup": {
+        "type": "Text",
+        "description": "When specified, field requiredness is evaluated only when a button in the same group is pressed"
+      },
+      "accessibilityText": {
+        "type": "Text",
+        "description": "Additional text to be announced by screen readers"
+      },
+      "showWhen": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Determines whether the component is displayed on the interface"
+      },
+      "marginAbove": {
+        "type": "Text",
+        "validValues": [
+          "NONE",
+          "EVEN_LESS",
+          "LESS",
+          "STANDARD",
+          "MORE",
+          "EVEN_MORE"
+        ]
+      },
+      "marginBelow": {
+        "type": "Text",
+        "validValues": [
+          "NONE",
+          "EVEN_LESS",
+          "LESS",
+          "STANDARD",
+          "MORE",
+          "EVEN_MORE"
+        ]
+      }
+    },
+    "textInputFields": {
+      "description": "Additional parameters for text-based input fields (textField, paragraphField, integerField, floatingPointField)",
+      "inherits": "allInputFields",
+      "refreshAfter": {
+        "type": "Text",
+        "validValues": [
+          "KEYPRESS",
+          "UNFOCUS"
+        ],
+        "default": "UNFOCUS"
+      },
+      "align": {
+        "type": "Text",
+        "validValues": [
+          "LEFT",
+          "CENTER",
+          "RIGHT"
+        ],
+        "description": "Alignment of text within the field"
+      },
+      "masked": {
+        "type": "Boolean",
+        "default": false,
+        "description": "Determines if the value is obscured from view"
+      }
+    },
+    "choiceFields": {
+      "description": "Parameters for choice-based input fields (dropdown, radio, checkbox)",
+      "inherits": "allInputFields",
+      "choiceLabels": {
+        "type": "List of Variant",
+        "description": "Array of options for the user to select"
+      },
+      "choiceValues": {
+        "type": "List of Variant",
+        "description": "Array of values associated with the corresponding choices",
+        "validation": "cannot be null or empty strings"
+      },
+      "data": {
+        "type": "Any",
+        "description": "The record type used as the source of the component's choices"
+      },
+      "sort": {
+        "type": "List of SortInfo",
+        "description": "Array of Sort Info configurations created with a!sortInfo()"
+      }
+    }
+  },
+  "components": {
+    "a!textField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields",
+        "textInputFields"
+      ],
+      "parameters": {
+        "inputPurpose": {
+          "type": "Text",
+          "validValues": [
+            "NAME",
+            "EMAIL",
+            "PHONE_NUMBER",
+            "STREET_ADDRESS",
+            "POSTAL_CODE",
+            "CREDIT_CARD_NUMBER",
+            "OFF"
+          ]
+        },
+        "characterLimit": {
+          "type": "Integer",
+          "description": "Maximum character count allowed"
+        },
+        "showCharacterCount": {
+          "type": "Boolean",
+          "default": true,
+          "description": "Displays character count when characterLimit is set"
+        }
+      },
+      "description": "Single line text input"
+    },
+    "a!paragraphField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "SHORT",
+            "MEDIUM",
+            "TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "characterLimit": {
+          "type": "Integer"
+        },
+        "showCharacterCount": {
+          "type": "Boolean",
+          "default": true
+        },
+        "refreshAfter": {
+          "type": "Text",
+          "validValues": [
+            "KEYPRESS",
+            "UNFOCUS"
+          ],
+          "default": "UNFOCUS"
+        }
+      },
+      "description": "Multi-line text input"
+    },
+    "a!styledTextEditorField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "height": {
+          "type": "Text",
+          "validValues": [
+            "EXTRA_SHORT",
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL"
+          ],
+          "default": "MEDIUM"
+        },
+        "sizeLimit": {
+          "type": "Integer",
+          "description": "Size limit in bytes (should match database field length)"
+        },
+        "allowedFormats": {
+          "type": "List of Text",
+          "validValues": [
+            "BOLD",
+            "ITALIC",
+            "UNDERLINE",
+            "STRIKETHROUGH",
+            "SUBSCRIPT",
+            "SUPERSCRIPT",
+            "LINK",
+            "TEXT_ALIGNMENT",
+            "NUMBERED_LIST",
+            "BULLETED_LIST",
+            "TABLE"
+          ],
+          "default": [
+            "BOLD",
+            "ITALIC",
+            "UNDERLINE",
+            "STRIKETHROUGH",
+            "LINK",
+            "NUMBERED_LIST",
+            "BULLETED_LIST"
+          ]
+        }
+      },
+      "description": "Rich text input with formatting toolbar - stores text with HTML formatting",
+      "specialNote": "To display styled text editor values in read-only mode, use a!styledTextEditorField with readOnly: true (NOT richTextDisplayField). For grid display, use stripHtml() on a separate database field."
+    },
+    "a!integerField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields",
+        "textInputFields"
+      ],
+      "parameters": {},
+      "description": "Integer number input"
+    },
+    "a!floatingPointField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields",
+        "textInputFields"
+      ],
+      "parameters": {},
+      "description": "Decimal number input"
+    },
+    "a!dateField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "excludedParameters": [
+        "placeholder"
+      ],
+      "parameters": {
+        "align": {
+          "type": "Text",
+          "validValues": [
+            "LEFT",
+            "CENTER",
+            "RIGHT"
+          ]
+        }
+      },
+      "description": "Date input (year, month, day)"
+    },
+    "a!dateTimeField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "excludedParameters": [
+        "placeholder"
+      ],
+      "parameters": {},
+      "description": "Date and time input (year, month, day, hour, minute, second)"
+    },
+    "a!timeField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {},
+      "description": "Time input (hour, minute, second)"
+    },
+    "a!dropdownField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields",
+        "choiceFields"
+      ],
+      "excludedParameters": [
+        "readOnly"
+      ],
+      "parameters": {
+        "searchDisplay": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "ON",
+            "OFF"
+          ]
+        }
+      },
+      "description": "Single selection dropdown"
+    },
+    "a!radioButtonField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields",
+        "choiceFields"
+      ],
+      "excludedParameters": [
+        "readOnly",
+        "placeholder"
+      ],
+      "parameters": {
+        "choiceLayout": {
+          "type": "Text",
+          "validValues": [
+            "STACKED",
+            "COMPACT"
+          ],
+          "default": "STACKED"
+        },
+        "choiceStyle": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "CARDS"
+          ],
+          "default": "STANDARD"
+        },
+        "spacing": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Single selection radio buttons"
+    },
+    "a!checkboxField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields",
+        "choiceFields"
+      ],
+      "excludedParameters": [
+        "placeholder"
+      ],
+      "parameters": {
+        "value": {
+          "type": "List of Variant",
+          "description": "Values of choices to display as selected (overrides inherited value parameter)"
+        },
+        "align": {
+          "type": "Text",
+          "validValues": [
+            "LEFT",
+            "CENTER",
+            "RIGHT"
+          ]
+        },
+        "choiceLayout": {
+          "type": "Text",
+          "validValues": [
+            "STACKED",
+            "COMPACT"
+          ],
+          "default": "STACKED"
+        },
+        "choiceStyle": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "CARDS"
+          ],
+          "default": "STANDARD"
+        },
+        "spacing": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ]
+        }
+      },
+      "description": "Multiple selection checkboxes"
+    },
+    "a!barcodeField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "refreshAfter": {
+          "type": "Text",
+          "validValues": [
+            "KEYPRESS",
+            "UNFOCUS"
+          ],
+          "default": "UNFOCUS"
+        },
+        "align": {
+          "type": "Text",
+          "validValues": [
+            "LEFT",
+            "CENTER",
+            "RIGHT"
+          ]
+        }
+      },
+      "description": "Displays and allows entry of a barcode value"
+    },
+    "a!pickerFieldUsers": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "value": {
+          "type": "List of Username",
+          "description": "Array of currently selected users"
+        },
+        "maxSelections": {
+          "type": "Integer"
+        },
+        "groupFilter": {
+          "type": "Group",
+          "description": "When present, only users who are members of this group are suggested"
+        }
+      },
+      "description": "Selects one or more users"
+    },
+    "a!pickerFieldGroups": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "value": {
+          "type": "List of Group"
+        },
+        "maxSelections": {
+          "type": "Integer"
+        },
+        "groupFilter": {
+          "type": "Group"
+        }
+      },
+      "description": "Selects one or more groups"
+    },
+    "a!pickerFieldUsersAndGroups": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "value": {
+          "type": "List of User or Group"
+        },
+        "maxSelections": {
+          "type": "Integer"
+        },
+        "groupFilter": {
+          "type": "Group"
+        }
+      },
+      "description": "Selects one or more users or groups"
+    },
+    "a!cardChoiceField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "data": {
+          "type": "List of Variant"
+        },
+        "cardTemplate": {
+          "type": "Any Type"
+        },
+        "value": {
+          "type": "List of Variant"
+        },
+        "maxSelections": {
+          "type": "Integer"
+        },
+        "spacing": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "NONE",
+            "DENSE",
+            "SPARSE"
+          ]
+        },
+        "align": {
+          "type": "Text",
+          "validValues": [
+            "START",
+            "CENTER",
+            "END"
+          ]
+        }
+      },
+      "description": "Selection displayed as styled cards"
+    },
+    "a!fileUploadField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "parameters": {
+        "target": {
+          "type": "Document/Folder",
+          "description": "Document or Folder where files will be stored"
+        },
+        "value": {
+          "type": "List of Document"
+        },
+        "fileNames": {
+          "type": "Text",
+          "description": "Text expression with fv! variables"
+        },
+        "fileDescriptions": {
+          "type": "Text",
+          "description": "Text expression with fv! variables"
+        },
+        "maxSelections": {
+          "type": "Integer"
+        },
+        "buttonStyle": {
+          "type": "Text",
+          "validValues": [
+            "NORMAL",
+            "PRIMARY",
+            "SECONDARY",
+            "LINK"
+          ]
+        },
+        "buttonDisplay": {
+          "type": "Text",
+          "validValues": [
+            "LABEL",
+            "ICON",
+            "LABEL_AND_ICON"
+          ]
+        },
+        "buttonSize": {
+          "type": "Text",
+          "validValues": [
+            "SMALL",
+            "STANDARD",
+            "LARGE"
+          ]
+        },
+        "uploadMethods": {
+          "type": "List of Text",
+          "validValues": [
+            "SIGNATURE",
+            "CAMERA",
+            "CHOOSE_PHOTO",
+            "CHOOSE_FILE"
+          ],
+          "description": "Available upload methods on mobile devices"
+        },
+        "showVirusScanMessage": {
+          "type": "Boolean"
+        }
+      },
+      "description": "File upload with document management"
+    },
+    "a!encryptedTextField": {
+      "category": "input",
+      "inherits": [
+        "allInputFields"
+      ],
+      "excludedParameters": [
+        "placeholder"
+      ],
+      "parameters": {
+        "value": {
+          "type": "Encrypted Text"
+        }
+      },
+      "specialNote": "Returns Encrypted Text type which CANNOT be compared, concatenated, or used in expressions. NOT compatible with synced record types - use a!textField with warning banner instead",
+      "description": "Encrypted text input field"
+    },
+    "a!toggleField": {
+      "category": "input",
+      "description": "Displays a toggle that saves a true or false value. Works well for controls that take effect immediately (e.g. enable dark mode, show inactive users). NOTE: Don't use toggles in forms — use a!booleanCheckboxField instead. Does not have label/labelPosition — uses choiceLabel.",
+      "inherits": [],
+      "parameters": {
+        "choiceLabel": {
+          "type": "Text",
+          "description": "Text displayed as the label next to the toggle."
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Help icon tooltip. Max 500 characters."
+        },
+        "value": {
+          "type": "Boolean",
+          "description": "true = on. false or null = off."
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "required": {
+          "type": "Boolean",
+          "description": "If true, value must be true to submit. Default required message: 'Enable the toggle to continue'.",
+          "default": false
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        },
+        "choicePosition": {
+          "type": "Text",
+          "description": "Whether the toggle appears on left (START) or right (END) of the choice label.",
+          "validValues": [
+            "START",
+            "END"
+          ],
+          "default": "START"
+        }
+      },
+      "specialNote": "Use for activation/state changes (e.g. 'Enable dark mode', 'Show inactive users'). Don't use in forms — use a!booleanCheckboxField instead. Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Toggle_Component.html"
+    },
+    "a!signatureField": {
+      "category": "input",
+      "description": "Allows users to capture and save a .png signature file. ONLY AVAILABLE on start forms or task forms — cannot be used in other interfaces. Cannot upload multiple signatures or pre-existing signature files.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ],
+          "default": "ABOVE"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Max 500 characters. Hidden when labelPosition is COLLAPSED."
+        },
+        "target": {
+          "type": "Folder",
+          "description": "Document Management folder where the signature file is permanently saved upon submission."
+        },
+        "fileName": {
+          "type": "Text",
+          "description": "Name of the saved signature file (without extension; .png is added automatically)."
+        },
+        "fileDescription": {
+          "type": "Text",
+          "description": "Description saved with the signature file in Document Management."
+        },
+        "value": {
+          "type": "Document",
+          "description": "Reference to a previously captured signature document."
+        },
+        "saveInto": {
+          "type": "List of Save",
+          "description": "Variables updated with the document reference when the signature is captured."
+        },
+        "required": {
+          "type": "Boolean",
+          "description": "If true, a signature is required to submit the form.",
+          "default": false
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "buttonStyle": {
+          "type": "Text",
+          "description": "Style for the signature button. Use button widget style values."
+        },
+        "buttonSize": {
+          "type": "Text",
+          "description": "Size for the signature button. Use button widget size values."
+        },
+        "readOnly": {
+          "type": "Boolean",
+          "description": "When true, signature can only be viewed, not captured/modified.",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "description": "When true, the signature button is grayed out and inactive.",
+          "default": false
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "specialNote": "USAGE RESTRICTION: only usable in start forms or task forms. Outside those contexts, use a!submitUploadedFiles() in a submit button's saveInto. The submit button must have submit:true to persist the signature to the target folder. Until submission, the signature stays in a temporary folder.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Signature_Component.html"
+    },
+    "a!multipleDropdownField": {
+      "category": "input",
+      "description": "Displays a list of choices for the user to select multiple items and saves values based on the selected choices.",
+      "specialNote": "Note: readOnly is inherited from allInputFields and is supported empirically, even though it is not listed in Appian's public Multiple Dropdown docs.",
+      "inherits": [
+        "allInputFields",
+        "choiceFields"
+      ],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "required": {
+          "type": "Boolean",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "placeholder": {
+          "type": "Text"
+        },
+        "choiceLabels": {
+          "type": "List of Variant"
+        },
+        "choiceValues": {
+          "type": "List of Variant"
+        },
+        "value": {
+          "type": "List of Variant"
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "validationGroup": {
+          "type": "Text"
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "JUSTIFIED",
+            "COLLAPSED"
+          ],
+          "default": "ABOVE"
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "searchDisplay": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "ON",
+            "OFF"
+          ],
+          "default": "AUTO"
+        },
+        "data": {
+          "type": "Any",
+          "description": "Record type reference or a!recordData()."
+        },
+        "sort": {
+          "type": "List of SortInfo"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Multiple_Dropdown_Component.html"
+    },
+    "a!booleanCheckboxField": {
+      "category": "input",
+      "description": "Displays a single checkbox that saves a true or false value. Works well for confirmations like terms and conditions. To select multiple items from a list, use a!checkboxField. NOTE: Does not have label or labelPosition — uses choiceLabel.",
+      "inherits": [],
+      "parameters": {
+        "choiceLabel": {
+          "type": "Text",
+          "description": "Text displayed as the label next to the checkbox."
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Help icon tooltip next to the choice label. Max 500 characters."
+        },
+        "value": {
+          "type": "Boolean",
+          "description": "true = checked. false or null = unchecked."
+        },
+        "saveInto": {
+          "type": "List of Save",
+          "description": "Variables updated when the user toggles the checkbox."
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "required": {
+          "type": "Boolean",
+          "description": "If true, must be selected to submit. Default required message: 'Select the checkbox to continue'.",
+          "default": false
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        },
+        "choicePosition": {
+          "type": "Text",
+          "description": "Whether the checkbox appears on left (START) or right (END) of the choice label.",
+          "validValues": [
+            "START",
+            "END"
+          ],
+          "default": "START"
+        }
+      },
+      "specialNote": "Use boolean checkbox in forms (Toggle should not be used in forms). Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Boolean_Checkbox_Component.html"
+    },
+    "a!pickerFieldRecords": {
+      "category": "input",
+      "description": "Displays an autocompleting input for selection of one or more records, filtered by a single record type. Suggestions and picker tokens use the record title. Picker displays up to 25 suggestions. Only records the viewing user has permission to see appear.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ],
+          "default": "ABOVE"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Max 500 characters. Hidden when labelPosition is COLLAPSED."
+        },
+        "placeholder": {
+          "type": "Text",
+          "description": "Text displayed when no record is selected."
+        },
+        "maxSelections": {
+          "type": "Integer",
+          "description": "Maximum number of records the user can select."
+        },
+        "recordType": {
+          "type": "Record Type Reference",
+          "description": "Record type to use as source. Use a recordType! reference.",
+          "required": true
+        },
+        "filters": {
+          "type": "List of Filter",
+          "description": "Filters applied to the record source."
+        },
+        "value": {
+          "type": "List of Record",
+          "description": "Records to display as selected."
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "required": {
+          "type": "Boolean",
+          "default": false
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "readOnly": {
+          "type": "Boolean",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "showRecordLinks": {
+          "type": "Boolean",
+          "description": "If true (default), each selected record token includes a link. Set false for reference data without navigation.",
+          "default": true
+        },
+        "marginAbove": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "NONE"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD"
+        }
+      },
+      "specialNote": "Cannot be used with rule-backed (deprecated) record types. For service-backed record types with data sync, search is based on record title fields. For service-backed without sync, search uses the configured search property.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Record_Picker_Component.html"
+    },
+    "a!checkboxFieldByIndex": {
+      "category": "input",
+      "description": "Displays a limited set of choices from which the user may select none, one, or many items and saves the INDICES (1-based) of selected choices. To save values instead, use a!checkboxField.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "required": {
+          "type": "Boolean",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "choiceLabels": {
+          "type": "List of Text",
+          "description": "Array of options. Cannot be null.",
+          "required": true
+        },
+        "value": {
+          "type": "List of Integer",
+          "description": "Indices of choices displayed as selected. Index starts at 1."
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "align": {
+          "type": "Text",
+          "description": "Choice-label alignment. Recommended only inside grid layout.",
+          "validValues": [
+            "LEFT",
+            "CENTER",
+            "RIGHT"
+          ]
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ],
+          "default": "ABOVE"
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Max 500 characters. Hidden when labelPosition is COLLAPSED."
+        },
+        "choiceLayout": {
+          "type": "Text",
+          "description": "STACKED = one above another. COMPACT = side by side (only for short labels like Yes/No).",
+          "validValues": [
+            "STACKED",
+            "COMPACT"
+          ],
+          "default": "STACKED"
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "choiceStyle": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "CARDS"
+          ],
+          "default": "STANDARD"
+        },
+        "choicePosition": {
+          "type": "Text",
+          "description": "Position of checkboxes relative to labels. Default ('Auto'): START for STANDARD, END for CARDS.",
+          "validValues": [
+            "START",
+            "END"
+          ]
+        }
+      },
+      "specialNote": "Indices are 1-based. Not available from the design view component picker. Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Checkbox_By_Index_Component.html"
+    },
+    "a!dropdownFieldByIndex": {
+      "category": "input",
+      "description": "Displays a list of choices for the user to select one item and saves the INDEX (1-based) of the selected choice. To save a value instead, use a!dropdownField.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ],
+          "default": "ABOVE"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "required": {
+          "type": "Boolean",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "choiceLabels": {
+          "type": "List of Text",
+          "required": true
+        },
+        "placeholder": {
+          "type": "Text",
+          "description": "Text displayed when no choice is selected."
+        },
+        "value": {
+          "type": "Integer",
+          "description": "Index displayed as selected (starts at 1). value and placeholder cannot both be null."
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Max 500 characters. Hidden when labelPosition is COLLAPSED."
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "searchDisplay": {
+          "type": "Text",
+          "description": "When search box displays. AUTO shows the box for >11 options.",
+          "validValues": [
+            "AUTO",
+            "ON",
+            "OFF"
+          ],
+          "default": "AUTO"
+        }
+      },
+      "specialNote": "Indices are 1-based. value cannot be less than 1 or greater than length of choiceLabels. Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Dropdown_By_Index_Component.html"
+    },
+    "a!multipleDropdownFieldByIndex": {
+      "category": "input",
+      "description": "Displays a list of choices for the user to select multiple items and saves the INDICES (1-based) of selected choices. To save values instead, use a!multipleDropdownField.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ],
+          "default": "ABOVE"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "required": {
+          "type": "Boolean",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "placeholder": {
+          "type": "Text"
+        },
+        "choiceLabels": {
+          "type": "List of Text",
+          "required": true
+        },
+        "value": {
+          "type": "List of Integer",
+          "description": "Indices of choices displayed as selected. Index starts at 1. List cannot contain null."
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Max 500 characters. Hidden when labelPosition is COLLAPSED."
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "searchDisplay": {
+          "type": "Text",
+          "description": "When search box displays. AUTO shows the box for >11 options.",
+          "validValues": [
+            "AUTO",
+            "ON",
+            "OFF"
+          ],
+          "default": "AUTO"
+        }
+      },
+      "specialNote": "Indices are 1-based. Users can clear all selections via X icon (web) or Clear link (mobile). Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Multiple_Dropdown_By_Index_Component.html"
+    },
+    "a!radioButtonFieldByIndex": {
+      "category": "input",
+      "description": "Displays a limited set of choices from which the user must select one item and saves the INDEX (1-based) of the selected choice. To save a value instead, use a!radioButtonField.",
+      "inherits": [],
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "required": {
+          "type": "Boolean",
+          "default": false
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false
+        },
+        "choiceLabels": {
+          "type": "List of Text",
+          "required": true
+        },
+        "value": {
+          "type": "Integer",
+          "description": "Index displayed as selected. Index starts at 1."
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "saveInto": {
+          "type": "List of Save"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Keyword for validation group. No spaces."
+        },
+        "requiredMessage": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "type": "Text",
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ],
+          "default": "ABOVE"
+        },
+        "choiceLayout": {
+          "type": "Text",
+          "validValues": [
+            "STACKED",
+            "COMPACT"
+          ],
+          "default": "STACKED"
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Max 500 characters. Hidden when labelPosition is COLLAPSED."
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "choiceStyle": {
+          "type": "Text",
+          "validValues": [
+            "STANDARD",
+            "CARDS"
+          ],
+          "default": "STANDARD"
+        },
+        "choicePosition": {
+          "type": "Text",
+          "description": "Position of radio buttons relative to labels. Default ('Auto'): START for STANDARD, END for CARDS.",
+          "validValues": [
+            "START",
+            "END"
+          ]
+        }
+      },
+      "specialNote": "Indices are 1-based. Compatible with Portals and Offline Mobile.",
+      "documentationUrl": "https://docs.appian.com/suite/help/latest/Radio_Button_By_Index_Component.html"
+    },
+    "a!chatField": {
+      "category": "input",
+      "introducedIn": "25.4",
+      "description": "Interactive AI chat component (advanced/premium tiers; usage limits; US English only). Pair with a!callLanguageModel() in saveInto (or a custom rule/integration for other AI providers). Messages built with a!chatMessage() (26.x). NOT compatible with portals or offline. For a turnkey agent experience Appian offers a!agentChatField (verify availability via appian-docs before using).",
+      "parameters": {
+        "title": {
+          "type": "Any Type",
+          "description": "Plain text or components shown above the chat."
+        },
+        "helpTooltip": {
+          "type": "Text",
+          "description": "Only shows when title is plain text."
+        },
+        "messages": {
+          "type": "Any Type",
+          "description": "a!chatMessage() or list of a!chatMessage()."
+        },
+        "height": {
+          "validValues": [
+            "EXTRA_SHORT",
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL",
+            "AUTO"
+          ],
+          "default": "AUTO"
+        },
+        "shape": {
+          "validValues": [
+            "SQUARED",
+            "SEMI_ROUNDED",
+            "ROUNDED"
+          ],
+          "default": "SQUARED"
+        },
+        "saveInto": {
+          "type": "Save Array",
+          "description": "Runs when the user sends a message; save!value is the sent text."
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "placeholder": {
+          "type": "Text"
+        },
+        "showBorder": {
+          "type": "Boolean",
+          "default": false
+        },
+        "streamingUuid": {
+          "type": "Text",
+          "description": "UUID returned by a!callLanguageModel(isStreaming: true)."
+        },
+        "streamingSaveInto": {
+          "type": "Save Array",
+          "description": "Receives partial streaming responses as a map with Content, isDone, Error keys."
+        },
+        "backgroundColor": {
+          "type": "Text",
+          "validValues": [
+            "WHITE",
+            "STANDARD",
+            "TRANSPARENT",
+            "CHARCOAL_SCHEME",
+            "NAVY_SCHEME",
+            "PLUM_SCHEME"
+          ],
+          "description": "Any hex color (no transparency) or listed value. Default WHITE."
+        }
+      }
+    }
+  }
+}

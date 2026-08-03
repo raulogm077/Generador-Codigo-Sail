@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "SAIL Button and Action Components - Buttons, links, and interactive elements",
+  "version": "3.0.0",
+  "sharedParameters": {
+    "visibilityControl": {
+      "description": "Common visibility and accessibility parameters for button components",
+      "showWhen": {
+        "type": "Boolean",
+        "default": true,
+        "description": "Determines whether the component is displayed on the interface. When false, the component is not evaluated."
+      },
+      "accessibilityText": {
+        "type": "Text",
+        "description": "Additional text to be announced by screen readers. Used only for accessibility; produces no visible change."
+      }
+    },
+    "confirmationDialog": {
+      "description": "Parameters for button confirmation dialogs",
+      "confirmMessage": {
+        "type": "Text",
+        "description": "Message displayed in confirmation dialog. Both confirmHeader and confirmMessage must be null to skip confirmation."
+      },
+      "confirmHeader": {
+        "type": "Text",
+        "description": "Header text for the confirmation dialog"
+      },
+      "confirmButtonLabel": {
+        "type": "Text",
+        "default": "Yes",
+        "description": "Label for the confirmation button in the confirmation dialog"
+      },
+      "cancelButtonLabel": {
+        "type": "Text",
+        "default": "No",
+        "description": "Label for the cancel button in the confirmation dialog"
+      }
+    }
+  },
+  "components": {
+    "a!buttonWidget": {
+      "category": "interactive",
+      "inherits": [
+        "visibilityControl",
+        "confirmationDialog"
+      ],
+      "parameters": {
+        "label": {
+          "type": "Text",
+          "description": "Text displayed on the button"
+        },
+        "style": {
+          "type": "Text",
+          "validValues": [
+            "OUTLINE",
+            "GHOST",
+            "LINK",
+            "SOLID"
+          ],
+          "default": "OUTLINE",
+          "description": "Determines button appearance and behavior"
+        },
+        "color": {
+          "type": "Text",
+          "validValues": [
+            "ACCENT",
+            "NEGATIVE",
+            "SECONDARY"
+          ],
+          "acceptsHexColors": true,
+          "supportsTransparency": true,
+          "default": "ACCENT",
+          "description": "Button color. Accepts enumerated values or hex colors with optional transparency (00-FF suffix). On SOLID and GHOST styles, label color auto-adjusts for contrast. Confirmation button inherits this color; cancel button always uses SECONDARY."
+        },
+        "size": {
+          "type": "Text",
+          "validValues": [
+            "SMALL",
+            "STANDARD",
+            "LARGE"
+          ],
+          "default": "STANDARD",
+          "description": "Controls button dimensions"
+        },
+        "width": {
+          "type": "Text",
+          "validValues": [
+            "MINIMIZE",
+            "FILL"
+          ],
+          "description": "MINIMIZE uses label width; FILL fills container. Default is auto (FILL on mobile, MINIMIZE on wider screens)."
+        },
+        "icon": {
+          "type": "Text",
+          "description": "Valid icon name to display with button. Icon displays before or after text based on iconPosition. Supports AI suggestions."
+        },
+        "iconPosition": {
+          "type": "Text",
+          "validValues": [
+            "START",
+            "END"
+          ],
+          "default": "START",
+          "description": "Positions icon relative to button text"
+        },
+        "disabled": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Prevents user from clicking the button"
+        },
+        "submit": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Determines if button submits form after saving"
+        },
+        "validate": {
+          "type": "Boolean",
+          "description": "Performs validation before saving. Defaults to true when submit is true, otherwise false."
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "Groups buttons for conditional field requiredness. Text without spaces (use underscores)."
+        },
+        "value": {
+          "type": "Any Type",
+          "description": "Value associated with the button when pressed"
+        },
+        "saveInto": {
+          "type": "List of Save",
+          "description": "One or more variables that are updated with a!save() when the button is pressed"
+        },
+        "loadingIndicator": {
+          "type": "Boolean",
+          "default": false,
+          "description": "When true, displays loading spinner and disables button during processing"
+        },
+        "tooltip": {
+          "type": "Text",
+          "description": "Text displayed on mouseover (web) or long press (mobile)"
+        },
+        "recaptchaSaveInto": {
+          "type": "List of Save",
+          "description": "Portals only. Uses a!save() with a!verifyRecaptcha() for verification results. Always errors in designer; requires live environment testing."
+        }
+      },
+      "description": "Interactive button with conditional form submission",
+      "notes": [
+        "Confirmation dialog displays when either confirmHeader or confirmMessage is non-null; state changes only occur upon confirmation",
+        "Color parameter accepts hex values with transparency via two additional digits (00=transparent, FF=opaque)",
+        "recaptchaSaveInto is limited to Portals and cannot be tested in designer"
+      ]
+    },
+    "a!buttonArrayLayout": {
+      "category": "interactive",
+      "inherits": [
+        "visibilityControl"
+      ],
+      "parameters": {
+        "buttons": {
+          "type": "List of ButtonWidget",
+          "description": "Array of buttons created with a!buttonWidget()"
+        },
+        "align": {
+          "type": "Text",
+          "validValues": [
+            "START",
+            "CENTER",
+            "END"
+          ],
+          "description": "Determines button positioning within the layout"
+        },
+        "marginBelow": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "EVEN_LESS",
+            "LESS",
+            "STANDARD",
+            "MORE",
+            "EVEN_MORE"
+          ],
+          "default": "STANDARD",
+          "description": "Determines how much space is added below the buttons"
+        }
+      },
+      "description": "Button list for interfaces (not form submission)",
+      "notes": [
+        "Single button renders right-justified; multiple buttons render left-justified",
+        "Best practice: explicitly set marginBelow: 'NONE' to improve vertical alignment by removing extra space below buttons"
+      ]
+    },
+    "a!buttonLayout": {
+      "category": "interactive",
+      "inherits": [
+        "visibilityControl"
+      ],
+      "parameters": {
+        "primaryButtons": {
+          "type": "List of ButtonWidget",
+          "description": "Array of prominent buttons created with a!buttonWidget(). First item in array is most prominent (rightmost on web, topmost on mobile)."
+        },
+        "secondaryButtons": {
+          "type": "List of ButtonWidget",
+          "description": "Array of less prominent buttons created with a!buttonWidget(). First item in array is least prominent (leftmost on web)."
+        }
+      },
+      "description": "Grouped buttons by prominence for form submission",
+      "notes": [
+        "Primary buttons ordering: First item = most prominent (rightmost on web/tablets, topmost on mobile)",
+        "Secondary buttons ordering: First item = least prominent (leftmost on web/tablets)",
+        "Display: Horizontal on web/tablets, vertical on mobile phones"
+      ]
+    }
+  }
+}

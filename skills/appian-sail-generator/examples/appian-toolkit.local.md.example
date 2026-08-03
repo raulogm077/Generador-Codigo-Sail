@@ -1,0 +1,33 @@
+---
+# Copy this file to <project>/.claude/appian-toolkit.local.md and adjust.
+# All fields are optional — delete any line to fall back to its default.
+enabled: true
+
+# Corporate palette (HEX, never "ACCENT"). A reference image in the request still wins.
+brand_hex: null          # e.g. "#0050A0"
+brand_hex_soft: null     # e.g. "#E6EEF7" (badges, hovers, soft backgrounds)
+
+# Phase-2 data model markdown, relative to the project root.
+data_model_context: "context/data-model-context.md"
+
+# Where generated .sail files go, relative to the project root.
+output_dir: "output"
+
+# false → never generate a!chatField / a!callLanguageModel / a!agentChatField
+# (requires Appian advanced/premium AI tier). Validators flag them as blocking.
+ai_components_available: true
+
+# Phase 2: prefer native a!kpiField over converted card KPIs when the
+# decision rule in display-conversion-kpis.md § Pattern 0 allows it.
+prefer_native_kpis: true
+---
+
+# Project notes (free-form — the generator reads this as context)
+
+Describe here anything the generator should know about this project:
+environment name, whose applications may be touched, naming prefixes,
+verified capability notes (with date), UX conventions, etc.
+
+Do NOT pin Appian version numbers in the frontmatter — when a feature's
+availability matters, verify it at generation time via the appian-docs MCP
+or appian-dev validateExpression().

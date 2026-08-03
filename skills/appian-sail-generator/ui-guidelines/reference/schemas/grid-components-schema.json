@@ -1,0 +1,903 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "SAIL Grid Components - Grid, column, and data presentation components",
+  "version": "2.4.0",
+  "components": {
+    "a!gridField": {
+      "category": "data",
+      "parameters": {
+        "data": {
+          "type": "RecordType/List/DataSubset"
+        },
+        "columns": {
+          "type": "List of a!gridColumn"
+        },
+        "emptyGridMessage": {
+          "type": "Text"
+        },
+        "pageSize": {
+          "type": "Integer"
+        },
+        "pagingSaveInto": {
+          "type": "Save Array"
+        },
+        "initialSorts": {
+          "type": "List of SortInfo"
+        },
+        "secondarySorts": {
+          "type": "List of SortInfo"
+        },
+        "selectable": {
+          "type": "Boolean",
+          "description": "Determines if grid rows are selectable. Required to enable selection functionality."
+        },
+        "selectionStyle": {
+          "type": "Text",
+          "validValues": [
+            "CHECKBOX",
+            "ROW_HIGHLIGHT",
+            "CHECKBOX_SUBTLE_HIGHLIGHT",
+            "SUBTLE_HIGHLIGHT"
+          ],
+          "description": "CHECKBOX (default), ROW_HIGHLIGHT, and (26.3+) CHECKBOX_SUBTLE_HIGHLIGHT, SUBTLE_HIGHLIGHT. Appian Mobile always uses CHECKBOX."
+        },
+        "selectionValue": {
+          "type": "List of Variant"
+        },
+        "selectionSaveInto": {
+          "type": "Save Array"
+        },
+        "selectionRequired": {
+          "type": "Boolean"
+        },
+        "selectionRequiredMessage": {
+          "type": "Text"
+        },
+        "maxSelections": {
+          "type": "Integer"
+        },
+        "showSelectionCount": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "ON",
+            "OFF"
+          ]
+        },
+        "disableRowSelectionWhen": {
+          "type": "Boolean"
+        },
+        "height": {
+          "validValues": [
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL",
+            "AUTO"
+          ]
+        },
+        "spacing": {
+          "validValues": [
+            "STANDARD",
+            "DENSE"
+          ]
+        },
+        "borderStyle": {
+          "validValues": [
+            "LIGHT",
+            "LIGHT_WITH_OUTER_BORDERS",
+            "STANDARD"
+          ],
+          "description": "LIGHT (default) row borders only; LIGHT_WITH_OUTER_BORDERS (26.5+) row + outer borders; STANDARD all borders."
+        },
+        "rowHeader": {
+          "type": "Integer"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "JUSTIFIED",
+            "COLLAPSED"
+          ]
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "showSearchBox": {
+          "type": "Boolean",
+          "recordDataOnly": true,
+          "description": "Shows built-in record search box above grid. Only works when data parameter uses recordType! or a!recordData(). Default: true. NEVER use with local! data."
+        },
+        "showRefreshButton": {
+          "type": "Boolean",
+          "recordDataOnly": true,
+          "description": "Shows refresh button to manually refresh data. Only works when data parameter uses recordType! or a!recordData(). Default: true. NEVER use with local! data."
+        },
+        "showExportButton": {
+          "type": "Boolean",
+          "recordDataOnly": true,
+          "description": "Shows export button to download grid data. Only works when data parameter uses recordType! or a!recordData(). Default: false."
+        },
+        "userFilters": {
+          "type": "List of Record Filter Reference",
+          "recordDataOnly": true,
+          "description": "User filter references from the record type (e.g., recordType!Case.filters.status). Displayed above grid next to search box. Supports list filters (dropdown selection) and date range filters. Only works with record data source."
+        },
+        "recordActions": {
+          "type": "List of a!recordActionItem",
+          "recordDataOnly": true,
+          "description": "Record actions to display above grid. Only works when data parameter uses recordType! or a!recordData()."
+        },
+        "loadDataAsync": {
+          "type": "Boolean",
+          "recordDataOnly": true,
+          "description": "Load grid data independently from rest of interface. Only works with record data source. Default: false."
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "recordDataOnly": true,
+          "validValues": [
+            "RECORD_ACTION"
+          ],
+          "description": "Refresh grid after specified events complete. Only works with record data source."
+        },
+        "openActionsIn": {
+          "type": "Text",
+          "validValues": [
+            "DIALOG",
+            "NEW_TAB",
+            "SAME_TAB"
+          ],
+          "description": "Determines how record actions open. Default: DIALOG."
+        },
+        "actionsDisplay": {
+          "type": "Text",
+          "validValues": [
+            "LABEL_AND_ICON",
+            "LABEL",
+            "ICON"
+          ],
+          "description": "Determines which details show for record actions. Default: LABEL_AND_ICON."
+        },
+        "actionsStyle": {
+          "type": "Text",
+          "validValues": [
+            "TOOLBAR",
+            "TOOLBAR_PRIMARY"
+          ],
+          "description": "Determines how actions display above the grid. Default: TOOLBAR."
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "No spaces allowed; use underscores."
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "shadeAlternateRows": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false,
+          "recordDataOnly": true
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "recordDataOnly": true,
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ],
+          "description": "Minutes between automatic data refreshes."
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type",
+          "recordDataOnly": true,
+          "description": "Variable or list of variables that trigger a data refresh when they change."
+        },
+        "similarityScoreThreshold": {
+          "type": "Decimal",
+          "recordDataOnly": true,
+          "description": "Minimum match quality for semantic search results. Default 1. Only with semantic search and showSearchBox: true."
+        },
+        "pagingControls": {
+          "type": "Text",
+          "recordDataOnly": true,
+          "validValues": [
+            "STANDARD",
+            "ROW_COUNT"
+          ],
+          "description": "STANDARD (default) omits total row count for performance; ROW_COUNT shows total and start/end controls (recommended only for small datasets). Record-type sources only."
+        },
+        "showManageFiltersMenu": {
+          "type": "Boolean",
+          "default": true,
+          "recordDataOnly": true,
+          "introducedIn": "26.5",
+          "description": "Shows the Manage Filters menu above the grid (only when search box or user filters are visible). Record-type sources only."
+        },
+        "smartSearchType": {
+          "type": "Text",
+          "recordDataOnly": true,
+          "validValues": [
+            "SEMANTIC",
+            "LEXICAL"
+          ],
+          "introducedIn": "26.6",
+          "description": "Adds smart search on top of keyword search. Requires showSearchBox: true and a record-type source."
+        },
+        "searchFields": {
+          "type": "List of RecordField",
+          "recordDataOnly": true,
+          "introducedIn": "26.6",
+          "description": "Record fields the search box searches (may include fields not shown in the grid, documents, extra-long text). Record-type sources only."
+        }
+      },
+      "description": "Read-only data grid with sorting, paging, selection, search, and record actions"
+    },
+    "a!gridColumn": {
+      "category": "data",
+      "parameters": {
+        "value": {
+          "type": "Any Type"
+        },
+        "sortField": {
+          "type": "Any Type"
+        },
+        "width": {
+          "validValues": [
+            "AUTO",
+            "ICON",
+            "ICON_PLUS",
+            "NARROW",
+            "NARROW_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "WIDE",
+            "1X",
+            "2X",
+            "3X",
+            "4X",
+            "5X",
+            "6X",
+            "7X",
+            "8X",
+            "9X",
+            "10X"
+          ]
+        },
+        "align": {
+          "validValues": [
+            "START",
+            "CENTER",
+            "END"
+          ]
+        },
+        "backgroundColor": {
+          "validValues": [
+            "NONE",
+            "ACCENT",
+            "SUCCESS",
+            "INFO",
+            "WARN",
+            "ERROR"
+          ],
+          "acceptsHexColors": true
+        }
+      },
+      "description": "Column definition for read-only grid with advanced display and export options"
+    },
+    "a!pagingInfo": {
+      "category": "data",
+      "parameters": {
+        "startIndex": {
+          "type": "Integer",
+          "required": true
+        },
+        "batchSize": {
+          "type": "Integer",
+          "required": true
+        },
+        "sort": {
+          "type": "List of a!sortInfo"
+        }
+      },
+      "description": "Defines paging information for data queries"
+    },
+    "a!queryRecordType": {
+      "category": "data",
+      "parameters": {
+        "recordType": {
+          "type": "RecordType",
+          "required": true
+        },
+        "fields": {
+          "type": "List of Field References or a!aggregationFields"
+        },
+        "filters": {
+          "type": "List of a!queryFilter or a!queryLogicalExpression"
+        },
+        "pagingInfo": {
+          "type": "a!pagingInfo",
+          "required": true
+        },
+        "fetchTotalCount": {
+          "type": "Boolean",
+          "description": "Default: false (since evolution 24r4, for performance). Set true ONLY when you read .totalCount from the result (e.g. custom paging or count displays); otherwise omit it.",
+          "default": false
+        },
+        "relatedRecordData": {
+          "type": "List of RelatedRecordData",
+          "description": "Use a!relatedRecordData() to filter, sort, and limit one-to-many related record sets (limit up to 100 related records per relationship)."
+        }
+      },
+      "description": "Query record type data with filtering and sorting"
+    },
+    "a!recordData": {
+      "category": "data",
+      "parameters": {
+        "recordType": {
+          "type": "RecordType",
+          "required": true
+        },
+        "filters": {
+          "type": "List of a!queryFilter or a!queryLogicalExpression"
+        },
+        "relatedRecordData": {
+          "type": "List of a!relatedRecordData"
+        }
+      },
+      "specialNote": "ONLY use directly in a!gridField data parameter or chart data parameter - NEVER in local variables",
+      "description": "Defines record data source for grids and charts"
+    },
+    "a!relatedRecordData": {
+      "category": "data",
+      "parameters": {
+        "relationship": {
+          "type": "Record Type Relationship",
+          "required": true,
+          "description": "A one-to-many record type relationship reference using recordType! domain notation"
+        },
+        "filters": {
+          "type": "Any Type (queryFilter or list of queryFilters)",
+          "description": "Filters applied to related records, combined with AND logic. Field references must use related record type fields."
+        },
+        "sort": {
+          "type": "List of a!sortInfo",
+          "description": "Sort order for related records using fields from the related record type"
+        },
+        "limit": {
+          "type": "Number (Integer)",
+          "description": "Maximum related records to return. Default: 10. Max: 100 for a!queryRecordType/a!recordData, 250 for a!queryRecordByIdentifier"
+        }
+      },
+      "specialNote": "ONLY works with ONE-TO-MANY relationships. Cannot be used in aggregations or records-powered charts. Requires data sync enabled.",
+      "description": "References a one-to-many relationship and allows filtering, sorting, and limiting of the related record set"
+    },
+    "a!aggregationFields": {
+      "category": "data",
+      "parameters": {
+        "groupings": {
+          "type": "List of a!grouping"
+        },
+        "measures": {
+          "type": "List of a!measure"
+        }
+      },
+      "description": "Defines grouping and measure fields for data aggregation"
+    },
+    "a!measure": {
+      "category": "data",
+      "parameters": {
+        "function": {
+          "type": "Text",
+          "required": true,
+          "validValues": [
+            "COUNT",
+            "SUM",
+            "MIN",
+            "MAX",
+            "AVG",
+            "DISTINCT_COUNT"
+          ]
+        },
+        "field": {
+          "type": "Field Reference",
+          "required": true
+        },
+        "alias": {
+          "type": "Text",
+          "required": true
+        },
+        "filters": {
+          "type": "List of a!queryFilter"
+        },
+        "label": {
+          "type": "Text",
+          "description": "Legend/tooltip text when the measure is used in a chart with a single grouping. Ignored in a!queryRecordType()."
+        },
+        "formatValue": {
+          "type": "Text",
+          "description": "Display format when the measure is used in a records-powered chart or KPI: AUTO (default), INTEGER, DECIMAL, DOLLAR, EURO, POUND, YEN, SWISS_FRANC, or a custom format via text() using fv!value. Display-only; does not affect calculations."
+        }
+      },
+      "description": "Defines a measure calculation for aggregated data"
+    },
+    "a!grouping": {
+      "category": "data",
+      "parameters": {
+        "field": {
+          "type": "Field Reference",
+          "required": true
+        },
+        "alias": {
+          "type": "Text",
+          "required": true
+        },
+        "interval": {
+          "type": "Text",
+          "validValues": [
+            "AUTO",
+            "YEAR",
+            "MONTH_OF_YEAR",
+            "MONTH_OF_YEAR_SHORT_TEXT",
+            "MONTH_OF_YEAR_TEXT",
+            "MONTH_TEXT",
+            "MONTH_SHORT_TEXT",
+            "MONTH_DATE",
+            "DATE",
+            "DATE_SHORT_TEXT",
+            "DATE_TEXT",
+            "DAY_OF_MONTH",
+            "HOUR_OF_DAY",
+            "HOUR",
+            "MINUTE_OF_HOUR",
+            "MINUTE"
+          ]
+        }
+      },
+      "description": "Defines a grouping field for data aggregation"
+    },
+    "a!queryFilter": {
+      "category": "data",
+      "parameters": {
+        "field": {
+          "type": "Field Reference",
+          "required": true
+        },
+        "operator": {
+          "type": "Text",
+          "required": true,
+          "validValues": [
+            "=",
+            "<>",
+            ">",
+            "<",
+            ">=",
+            "<=",
+            "in",
+            "not in",
+            "is null",
+            "not null",
+            "between",
+            "starts with",
+            "not starts with",
+            "ends with",
+            "not ends with",
+            "includes",
+            "not includes",
+            "like"
+          ]
+        },
+        "value": {
+          "type": "Any Type"
+        },
+        "applyWhen": {
+          "type": "Boolean"
+        }
+      },
+      "description": "Defines a filter condition for record queries"
+    },
+    "a!queryLogicalExpression": {
+      "category": "data",
+      "parameters": {
+        "operator": {
+          "type": "Text",
+          "required": true,
+          "validValues": [
+            "AND",
+            "OR"
+          ]
+        },
+        "filters": {
+          "type": "List of a!queryFilter or a!queryLogicalExpression",
+          "required": true
+        }
+      },
+      "description": "Combines multiple query filters with AND/OR logic"
+    },
+    "a!gridLayout": {
+      "category": "data",
+      "parameters": {
+        "headerCells": {
+          "type": "List of a!gridLayoutHeaderCell"
+        },
+        "columnConfigs": {
+          "type": "List of a!gridLayoutColumnConfig"
+        },
+        "rows": {
+          "type": "List of a!gridRowLayout"
+        },
+        "emptyGridMessage": {
+          "type": "Text"
+        },
+        "height": {
+          "validValues": [
+            "SHORT",
+            "SHORT_PLUS",
+            "MEDIUM",
+            "MEDIUM_PLUS",
+            "TALL",
+            "TALL_PLUS",
+            "EXTRA_TALL",
+            "AUTO"
+          ]
+        },
+        "spacing": {
+          "validValues": [
+            "STANDARD",
+            "DENSE"
+          ]
+        },
+        "borderStyle": {
+          "validValues": [
+            "STANDARD",
+            "LIGHT"
+          ]
+        },
+        "selectionValue": {
+          "type": "List of Variant"
+        },
+        "selectionSaveInto": {
+          "type": "List of Save"
+        },
+        "selectionStyle": {
+          "type": "Text",
+          "validValues": [
+            "CHECKBOX",
+            "ROW_HIGHLIGHT"
+          ]
+        },
+        "selectionDisabled": {
+          "type": "Boolean"
+        },
+        "selectionRequired": {
+          "type": "Boolean"
+        },
+        "addRowLink": {
+          "type": "Link"
+        },
+        "totalCount": {
+          "type": "Integer"
+        },
+        "rowHeader": {
+          "type": "Integer"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "JUSTIFIED",
+            "COLLAPSED"
+          ]
+        },
+        "validations": {
+          "type": "List of Text"
+        },
+        "label": {
+          "type": "Text"
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "validationGroup": {
+          "type": "Text",
+          "description": "No spaces allowed; use underscores."
+        },
+        "selectable": {
+          "type": "Boolean",
+          "default": false
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "shadeAlternateRows": {
+          "type": "Boolean",
+          "default": false
+        },
+        "accessibilityText": {
+          "type": "Text"
+        },
+        "allowRowReordering": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Enables drag-and-drop row reordering. Use together with rowOrderData and rowOrderField."
+        },
+        "rowOrderTooltip": {
+          "type": "Any Type",
+          "description": "Tooltip config for the row-reorder handle (official example uses rowOrderTooltip: true)."
+        },
+        "rowOrderData": {
+          "type": "Any Type",
+          "description": "Local variable or rule input holding the grid data list to update when rows are reordered."
+        },
+        "rowOrderField": {
+          "type": "Any Type",
+          "description": "Integer field that stores the row order index. Record type: recordType!X.fields.orderIndex; CDT/map: field name as string. Cannot be a related-record field."
+        }
+      },
+      "specialNote": "For inline editing - use a!gridField for read-only display",
+      "description": "Editable grid with inline editing"
+    },
+    "a!queryRecordByIdentifier": {
+      "category": "data",
+      "description": "Executes a query for a SINGLE record by its identifier and returns the record data with related record data. Automatic batching (no pagingInfo). Up to 250 related records per relationship (vs 100 in a!queryRecordType). Best for summary views and related actions that read/update one record (pair with rv!identifier in record views). Do NOT call inside a loop.",
+      "parameters": {
+        "recordType": {
+          "type": "RecordType",
+          "required": true,
+          "description": "Record type reference from the recordType! domain."
+        },
+        "identifier": {
+          "type": "Any Type",
+          "required": true,
+          "description": "Primary-key value of the record. For composite primary keys (26.3+), provide values for all key fields."
+        },
+        "fields": {
+          "type": "Any Type",
+          "description": "Record fields / related record fields to return (recordType! domain), or a!selectionFields() to return all fields. When null, ONLY the primary key field is returned."
+        },
+        "relatedRecordData": {
+          "type": "List of RelatedRecordData",
+          "description": "Use a!relatedRecordData() to filter, sort, and limit one-to-many related record sets (limit up to 250)."
+        }
+      },
+      "returns": "Record Type instance"
+    },
+    "a!selectionFields": {
+      "category": "data",
+      "description": "Returns all fields from the record type (and optionally related record types) inside the fields parameter of a!queryRecordType()/a!queryRecordByIdentifier(). Use ONLY when returning every field is truly necessary - querying specific fields is the performance best practice.",
+      "parameters": {
+        "recordType": {
+          "type": "RecordType",
+          "description": "Record type whose fields to return."
+        },
+        "relationships": {
+          "type": "Any Type",
+          "description": "Optional relationship references whose related fields should also be returned."
+        }
+      }
+    },
+    "a!eventHistoryListField": {
+      "category": "data",
+      "description": "Displays the event history for one or more record types (requires record events configured on the record type - Event History record type). NOT compatible with portals or offline mobile. Functional-only: needs real record types; never use in mockups with local! data.",
+      "parameters": {
+        "label": {
+          "type": "Text"
+        },
+        "labelPosition": {
+          "validValues": [
+            "ABOVE",
+            "ADJACENT",
+            "COLLAPSED",
+            "JUSTIFIED"
+          ]
+        },
+        "instructions": {
+          "type": "Text"
+        },
+        "helpTooltip": {
+          "type": "Text"
+        },
+        "emptyListMessage": {
+          "type": "Text"
+        },
+        "eventData": {
+          "type": "List of EventData",
+          "required": true,
+          "description": "One or more a!eventData() configurations."
+        },
+        "eventStyle": {
+          "type": "Text",
+          "validValues": [
+            "PREVIEW_LIST",
+            "FULL_LIST",
+            "TIMELINE",
+            "LIST_WITH_COMMENTS"
+          ]
+        },
+        "formatTimestamp": {
+          "type": "Text",
+          "validValues": [
+            "DATE",
+            "DATE_TIME",
+            "DATE_TIME_TIMEZONE"
+          ]
+        },
+        "displayUser": {
+          "type": "Text",
+          "validValues": [
+            "NONE",
+            "INITIALS",
+            "IMAGE"
+          ]
+        },
+        "displayUserColorScheme": {
+          "type": "Any Type",
+          "validValues": [
+            "PARACHUTE",
+            "VIBRANT",
+            "CLASSIC"
+          ],
+          "description": "Or a!colorSchemeCustom()."
+        },
+        "previewListPageSize": {
+          "type": "Integer",
+          "description": "1-10, default 5. PREVIEW_LIST style only."
+        },
+        "pageSize": {
+          "type": "Integer",
+          "description": "1-100, default 10."
+        },
+        "showWhen": {
+          "type": "Boolean",
+          "default": true
+        },
+        "refreshAlways": {
+          "type": "Boolean",
+          "default": false
+        },
+        "refreshAfter": {
+          "type": "List of Text",
+          "validValues": [
+            "RECORD_ACTION"
+          ]
+        },
+        "refreshInterval": {
+          "type": "Decimal",
+          "validValues": [
+            0.5,
+            1,
+            2,
+            3,
+            4,
+            5,
+            10,
+            30,
+            60
+          ]
+        },
+        "refreshOnReferencedVarChange": {
+          "type": "Boolean",
+          "default": true
+        },
+        "refreshOnVarChange": {
+          "type": "Any Type"
+        },
+        "userFilters": {
+          "type": "List of Any Type"
+        },
+        "eventFilters": {
+          "type": "List of Text",
+          "validValues": [
+            "EVENT_TYPE",
+            "DATE_RANGE"
+          ]
+        },
+        "collapseDetailsByDefault": {
+          "type": "Boolean"
+        },
+        "showSearchBox": {
+          "type": "Boolean"
+        },
+        "showReverseSortButton": {
+          "type": "Boolean"
+        },
+        "commentLayout": {
+          "type": "Text"
+        },
+        "mentionableUsers": {
+          "type": "Any Type"
+        },
+        "commentCardColor": {
+          "type": "Text"
+        },
+        "notificationUrl": {
+          "type": "Text"
+        }
+      }
+    },
+    "a!eventData": {
+      "category": "data",
+      "description": "Configures the event data of ONE record type for a!eventHistoryListField(). Reference row data with fv!data.",
+      "parameters": {
+        "recordType": {
+          "type": "RecordType",
+          "required": true
+        },
+        "filters": {
+          "type": "Any Type"
+        },
+        "timestamp": {
+          "type": "RecordField"
+        },
+        "user": {
+          "type": "RecordField"
+        },
+        "eventTypeName": {
+          "type": "Any Type",
+          "description": "Usually fv!data[...related eventType name field]."
+        },
+        "details": {
+          "type": "Any Type"
+        },
+        "recordTypeForTag": {
+          "type": "RecordType"
+        },
+        "recordIdentifier": {
+          "type": "RecordField"
+        },
+        "comment": {
+          "type": "RecordField"
+        },
+        "allowUsersToComment": {
+          "type": "Boolean"
+        },
+        "baseRecordIdForComment": {
+          "type": "Any Type"
+        },
+        "allowUsersToReply": {
+          "type": "Boolean"
+        },
+        "notificationUrl": {
+          "type": "Text"
+        }
+      }
+    }
+  }
+}
