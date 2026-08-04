@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<connectedSystemHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000087</versionUuid>
+  <connectedSystem name="DEMO_CS_ERP" uuid="00000000-0000-0000-0000-000000000013">
+    <description>Sistema ERP corporativo (sintetico).</description>
+    <connectedSystemType>HTTP</connectedSystemType>
+    <baseUrl>https://erp.example.local/api</baseUrl>
+    <authenticationType>API_KEY</authenticationType>
+  </connectedSystem>
+</connectedSystemHaul>

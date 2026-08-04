@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000098</versionUuid>
+  <webApi name="DEMO_WS_ConsultaEstado" uuid="00000000-0000-0000-0000-000000000008">
+    <description>API publica para consultar el estado de una solicitud. Llama a rule!DEMO_QR_GetSolicitudes.</description>
+    <httpMethod>GET</httpMethod>
+    <endpointPath>solicitudes/estado</endpointPath>
+  </webApi>
+</contentHaul>

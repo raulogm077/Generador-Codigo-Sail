@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<applicationHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000090</versionUuid>
+  <application name="DEMO App Solicitudes" uuid="00000000-0000-0000-0000-000000000010">
+    <description>Aplicacion sintetica de pruebas para la skill de reingenieria inversa.</description>
+    <prefix>DEMO</prefix>
+    <urlIdentifier>demo-app</urlIdentifier>
+  </application>
+</applicationHaul>

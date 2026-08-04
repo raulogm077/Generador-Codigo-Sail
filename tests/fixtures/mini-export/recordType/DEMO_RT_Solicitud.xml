@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<recordTypeHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000089</versionUuid>
+  <recordType name="DEMO Solicitud" uuid="00000000-0000-0000-0000-000000000011">
+    <description>Record type de solicitudes.</description>
+    <urlStub>demo-solicitud</urlStub>
+    <recordTypeUrn>urn:appian:record-type:v1:00000000-0000-0000-0000-000000000011</recordTypeUrn>
+    <fields>
+      <field name="solicitudId" type="Number (Integer)" required="true" primaryKey="true" uuid="00000000-0000-0000-0000-000000000020"/>
+      <field name="solicitante" type="Text" required="true" uuid="00000000-0000-0000-0000-000000000021"/>
+      <field name="importe" type="Number (Decimal)" required="true" uuid="00000000-0000-0000-0000-000000000022"/>
+      <field name="justificacion" type="Text" required="false" uuid="00000000-0000-0000-0000-000000000023"/>
+      <field name="estado" type="Text" required="true" uuid="00000000-0000-0000-0000-000000000024"/>
+    </fields>
+    <relationships>
+      <relationship name="historial" target="DEMO Historial" type="ONE_TO_MANY" uuid="00000000-0000-0000-0000-000000000025"/>
+    </relationships>
+    <views>
+      <view name="Resumen" interface="DEMO_IFC_SolicitudForm"/>
+    </views>
+    <actions>
+      <action name="Nueva solicitud" process="DEMO_PM_AprobarSolicitud"/>
+    </actions>
+  </recordType>
+</recordTypeHaul>

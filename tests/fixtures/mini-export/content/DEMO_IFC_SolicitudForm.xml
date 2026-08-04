@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000091</versionUuid>
+  <interface name="DEMO_IFC_SolicitudForm" uuid="00000000-0000-0000-0000-000000000001">
+    <description>Formulario de alta y edicion de una solicitud.</description>
+    <ruleInputs>
+      <ruleInput name="solicitante" type="Text" required="true"/>
+      <ruleInput name="importe" type="Number (Decimal)" required="true"/>
+      <ruleInput name="justificacion" type="Text" required="false"/>
+      <ruleInput name="modo" type="Text" required="false"/>
+    </ruleInputs>
+    <definition><![CDATA[
+a!localVariables(
+  local!erroresImporte: rule!DEMO_VAL_ValidarImporte(ri!importe),
+  local!listado: rule!DEMO_IFC_SolicitudList(),
+  a!formLayout(
+    label: "Nueva solicitud",
+    contents: {
+      a!textField(label: "Solicitante", value: ri!solicitante, saveInto: ri!solicitante, required: true),
+      a!floatingPointField(label: "Importe", value: ri!importe, saveInto: ri!importe, required: true, validations: local!erroresImporte),
+      a!paragraphField(
+        label: "Justificacion",
+        value: ri!justificacion,
+        saveInto: ri!justificacion,
+        showWhen: ri!importe > 1000,
+        required: ri!importe > 1000
+      ),
+      a!textField(
+        label: "Registro",
+        value: recordType!{00000000-0000-0000-0000-000000000011}DEMO Solicitud,
+        readOnly: true,
+        showWhen: false
+      )
+    },
+    buttons: a!buttonLayout(
+      primaryButtons: a!buttonWidget(label: "Enviar", submit: true, style: "SOLID", validate: true)
+    )
+  )
+)
+]]></definition>
+  </interface>
+</contentHaul>

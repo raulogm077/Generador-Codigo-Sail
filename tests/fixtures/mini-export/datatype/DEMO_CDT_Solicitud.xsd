@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:com:appian:types:DEMO"
+            xmlns:tns="urn:com:appian:types:DEMO">
+  <xsd:complexType name="DEMO_CDT_Solicitud">
+    <xsd:annotation>
+      <xsd:appinfo source="appian.jpa">@Table(name="DEMO_SOLICITUD")</xsd:appinfo>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="solicitudId" type="xsd:int" minOccurs="1"/>
+      <xsd:element name="solicitante" type="xsd:string" minOccurs="1"/>
+      <xsd:element name="importe" type="xsd:double" minOccurs="1"/>
+      <xsd:element name="justificacion" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="estado" type="xsd:string" minOccurs="1"/>
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>

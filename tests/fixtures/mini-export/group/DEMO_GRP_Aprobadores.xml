@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<groupHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000088</versionUuid>
+  <group name="DEMO_GRP_Aprobadores" uuid="00000000-0000-0000-0000-000000000012">
+    <description>Usuarios que pueden aprobar solicitudes.</description>
+    <groupType>CUSTOM</groupType>
+  </group>
+</groupHaul>

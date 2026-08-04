@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000093</versionUuid>
+  <rule name="DEMO_QR_GetSolicitudes" uuid="00000000-0000-0000-0000-000000000003">
+    <description>Consulta solicitudes filtradas por estado.</description>
+    <ruleInputs>
+      <ruleInput name="estado" type="Text" required="false"/>
+    </ruleInputs>
+    <definition><![CDATA[
+/* urn:appian:record-type:v1:00000000-0000-0000-0000-000000000011 */
+a!queryRecordType(
+  recordType: 'recordType!{00000000-0000-0000-0000-000000000011}DEMO Solicitud',
+  fields: { 'recordType!{00000000-0000-0000-0000-000000000011}DEMO Solicitud.fields.{00000000-0000-0000-0000-000000000021}solicitante' },
+  filters: a!queryFilter(
+    field: 'recordType!{00000000-0000-0000-0000-000000000011}DEMO Solicitud.fields.{00000000-0000-0000-0000-000000000024}estado',
+    operator: "=",
+    value: ri!estado,
+    applyWhen: a!isNotNullOrEmpty(ri!estado)
+  ),
+  pagingInfo: a!pagingInfo(startIndex: 1, batchSize: 100)
+).data
+]]></definition>
+  </rule>
+</contentHaul>

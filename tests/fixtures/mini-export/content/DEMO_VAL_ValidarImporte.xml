@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000094</versionUuid>
+  <rule name="DEMO_VAL_ValidarImporte" uuid="00000000-0000-0000-0000-000000000004">
+    <description>Valida el importe de una solicitud. Un solo caller (el formulario).</description>
+    <ruleInputs>
+      <ruleInput name="importe" type="Number (Decimal)" required="true"/>
+    </ruleInputs>
+    <definition><![CDATA[
+if(
+  a!isNullOrEmpty(ri!importe),
+  "El importe es obligatorio",
+  if(
+    ri!importe <= 0,
+    "El importe debe ser mayor que cero",
+    if(ri!importe > 100000, "El importe supera el maximo permitido (100.000)", null)
+  )
+)
+]]></definition>
+  </rule>
+</contentHaul>

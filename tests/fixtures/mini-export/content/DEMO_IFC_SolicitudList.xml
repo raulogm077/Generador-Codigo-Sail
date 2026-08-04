@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000092</versionUuid>
+  <interface name="DEMO_IFC_SolicitudList" uuid="00000000-0000-0000-0000-000000000002">
+    <description>Listado de solicitudes con filtro por estado.</description>
+    <ruleInputs>
+      <ruleInput name="estadoFiltro" type="Text" required="false"/>
+    </ruleInputs>
+    <definition><![CDATA[
+a!localVariables(
+  local!solicitudes: rule!DEMO_QR_GetSolicitudes(estado: ri!estadoFiltro),
+  a!gridField(
+    label: "Solicitudes",
+    data: local!solicitudes,
+    columns: {
+      a!gridColumn(label: "Solicitante", value: fv!row.solicitante),
+      a!gridColumn(label: "Importe", value: fv!row.importe),
+      a!gridColumn(label: "Estado", value: fv!row.estado)
+    },
+    pageSize: 20
+  )
+)
+]]></definition>
+  </interface>
+</contentHaul>

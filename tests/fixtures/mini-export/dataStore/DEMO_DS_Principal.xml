@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataStoreHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000086</versionUuid>
+  <dataStore name="DEMO_DS_Principal" uuid="00000000-0000-0000-0000-000000000014">
+    <description>Data store principal de la aplicacion.</description>
+    <entity name="solicitud" cdt="DEMO_CDT_Solicitud"/>
+  </dataStore>
+</dataStoreHaul>

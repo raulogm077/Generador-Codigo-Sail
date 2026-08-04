@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000097</versionUuid>
+  <outboundIntegration name="DEMO_INT_EnviarERP" uuid="00000000-0000-0000-0000-000000000007">
+    <description>Envia la solicitud aprobada al ERP.</description>
+    <method>POST</method>
+    <endpoint>https://erp.example.local/api/solicitudes</endpoint>
+    <connectedSystemRef>DEMO_CS_ERP</connectedSystemRef>
+  </outboundIntegration>
+</contentHaul>

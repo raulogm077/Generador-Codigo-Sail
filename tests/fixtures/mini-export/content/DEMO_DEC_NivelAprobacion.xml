@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000095</versionUuid>
+  <decision name="DEMO_DEC_NivelAprobacion" uuid="00000000-0000-0000-0000-000000000005">
+    <description>Determina el nivel de aprobacion segun el importe.</description>
+    <inputs>
+      <input name="importe" type="Number (Decimal)"/>
+    </inputs>
+    <outputs>
+      <output name="nivel" type="Text"/>
+    </outputs>
+    <rows>
+      <row><condition>importe &lt;= 1000</condition><result>RESPONSABLE</result></row>
+      <row><condition>importe &gt; 1000 y importe &lt;= 10000</condition><result>DIRECTOR</result></row>
+      <row><condition>importe &gt; 10000</condition><result>COMITE</result></row>
+    </rows>
+  </decision>
+</contentHaul>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<processModelHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000099</versionUuid>
+  <processModel uuid="00000000-0000-0000-0000-000000000009">
+    <meta>
+      <name>
+        <pair><locale lang="es"/><value>DEMO_PM_AprobarSolicitud</value></pair>
+      </name>
+      <description>
+        <pair><locale lang="es"/><value>Aprueba o rechaza una solicitud enviada.</value></pair>
+      </description>
+    </meta>
+    <processVariables>
+      <variable name="solicitud" type="DEMO_CDT_Solicitud" parameter="true"/>
+      <variable name="nivelAprobacion" type="Text" parameter="false"/>
+      <variable name="resultado" type="Text" parameter="false"/>
+    </processVariables>
+    <nodes>
+      <node type="start" name="Inicio" id="n0">
+        <startType>userStart</startType>
+        <form>DEMO_IFC_SolicitudForm</form>
+      </node>
+      <node type="script" name="Calcular nivel de aprobacion" id="n1">
+        <expression><![CDATA[pv!nivelAprobacion: rule!DEMO_DEC_NivelAprobacion(importe: pv!solicitud.importe)]]></expression>
+      </node>
+      <node type="gateway" name="¿Nivel?" id="n2">
+        <condition><![CDATA[pv!nivelAprobacion = "RESPONSABLE"]]></condition>
+      </node>
+      <node type="userInput" name="Aprobar o rechazar" id="n3">
+        <assignees>DEMO_GRP_Aprobadores</assignees>
+        <form>DEMO_IFC_SolicitudForm</form>
+      </node>
+      <node type="script" name="Marcar APROBADO" id="n4">
+        <expression><![CDATA[pv!solicitud.estado: "APROBADO"]]></expression>
+      </node>
+      <node type="integration" name="Enviar al ERP" id="n5">
+        <integrationRef>DEMO_INT_EnviarERP</integrationRef>
+      </node>
+      <node type="end" name="Fin" id="n6"/>
+    </nodes>
+    <flows>
+      <flow from="n0" to="n1"/>
+      <flow from="n1" to="n2"/>
+      <flow from="n2" to="n3"/>
+      <flow from="n3" to="n4"/>
+      <flow from="n4" to="n5"/>
+      <flow from="n5" to="n6"/>
+    </flows>
+  </processModel>
+</processModelHaul>
