@@ -486,9 +486,9 @@ REF_PATTERNS = {
     "queryEntity": re.compile(r"a!queryEntity\s*\(\s*entity\s*:\s*cons!([A-Za-z0-9_]+)"),
     "writeEntity": re.compile(r"a!writeToDataStoreEntity\s*\(\s*dataStoreEntity\s*:\s*cons!([A-Za-z0-9_]+)"),
     "writeRecords": re.compile(r"a!writeRecords\s*\([\s\S]{0,400}?\{([0-9a-fA-F\-]{36})\}"),
-    "subprocess": re.compile(r"<processModelUuid>\s*([0-9a-fA-F\-]{36})\s*</processModelUuid>"),
+    "subprocess": re.compile(r"<(?:[\w.\-]+:)?processModelUuid>\s*([0-9a-fA-F\-]{36})\s*</(?:[\w.\-]+:)?processModelUuid>"),
     "memberOfGroup": re.compile(r"a!isUserMemberOfGroup\s*\([\s\S]{0,200}?groups?\s*:\s*(?:cons!)?([A-Za-z0-9_]+)"),
-    "connectedSystemRef": re.compile(r"<connectedSystemRef>\s*([^<\s][^<]*?)\s*</connectedSystemRef>"),
+    "connectedSystemRef": re.compile(r"<(?:[\w.\-]+:)?connectedSystemRef>\s*([^<\s][^<]*?)\s*</(?:[\w.\-]+:)?connectedSystemRef>"),
 }
 
 
@@ -624,8 +624,11 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             "orphanCount": len(orphans),
             "hubCount": len(hubs),
         },
-        "orphans": orphans[:50],
-        "hubs": hubs[:30],
+        # orphans va COMPLETA a proposito: backlog-writer la usa como evidencia
+        # de "objeto muerto" para justificar un DESCARTADO, y una lista truncada
+        # afirmaria muerte sobre datos incompletos. hubs si es un top-N.
+        "orphans": orphans,
+        "hubs": hubs[:30],  # top-30 por indegree (deliberado)
     }
 
 

@@ -79,6 +79,8 @@ Rellena `trazabilidad-template.md` con **una fila por CADA objeto de inventory.j
 | Estado | `DOCUMENTADO` o `DESCARTADO: {motivo}` — **nada más** |
 
 - `DESCARTADO` exige motivo no vacío **con evidencia** (p. ej. `objeto muerto: 0 callers en graph.json y sin trigger propio — Evidencia: _intermedio/graph.json#orphans`). Sin evidencia de muerte, el objeto se documenta.
+- La lista `orphans` de `graph.json` es **completa** (no truncada). Compruébalo antes de usarla como evidencia: `len(orphans)` debe coincidir con `stats.orphanCount`; si no coincide, no afirmes muerte de nada y marca 🟡. Ojo: `hubs` sí es un top-30 por diseño.
+- Ser huérfano **no basta** para descartar: un site, una web API o un batch son entry points legítimos sin callers entrantes. Cruza siempre con el tipo de objeto antes de declararlo muerto.
 - Celda sin correspondencia = `—`, nunca vacía (una application o un grupo no tienen ficha propia de pantalla: `—` en la 4ª columna y DOCUMENTADO igualmente — su documentación vive en 00-09).
 - Cierra con `**Cobertura**: N/N objetos (100%)` usando el N del Paso 1.
 

@@ -66,6 +66,47 @@ class TestGraph(unittest.TestCase):
         )
 
 
+class TestParserRobustness(unittest.TestCase):
+    """M5 y M6: huerfanos completos y tags con prefijo de namespace."""
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("parse_export", SCRIPT)
+        cls.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.mod)
+
+    def test_subprocess_pattern_con_prefijo_de_namespace(self):
+        """Los exports Haul reales llevan prefijo (<a:processModelUuid>); el
+        fixture sintetico no, asi que el test verde no distinguia el caso."""
+        xml = '<a:processModelUuid>00000000-0000-0000-0000-000000000009</a:processModelUuid>'
+        m = self.mod.REF_PATTERNS["subprocess"].search(xml)
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), "00000000-0000-0000-0000-000000000009")
+
+    def test_connected_system_ref_con_prefijo_de_namespace(self):
+        xml = "<ns2:connectedSystemRef>DEMO_CS_ERP</ns2:connectedSystemRef>"
+        m = self.mod.REF_PATTERNS["connectedSystemRef"].search(xml)
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), "DEMO_CS_ERP")
+
+    def test_orphans_no_se_truncan(self):
+        """backlog-writer usa graph.json#orphans como evidencia de 'objeto
+        muerto': truncada a 50, afirmaria muerte sobre datos incompletos."""
+        objetos = [
+            {
+                "type": "expressionRule",
+                "name": f"DEMO_R{i:03d}",
+                "uuid": f"00000000-0000-0000-0000-{i:012d}",
+                "path": f"/no/existe/DEMO_R{i:03d}.xml",  # read_text falla -> 0 aristas
+            }
+            for i in range(60)
+        ]
+        inventory = {"objects": {"expressionRule": objetos}}
+        graph = self.mod.cmd_graph(Path("."), inventory)
+        self.assertEqual(graph["stats"]["orphanCount"], 60)
+        self.assertEqual(len(graph["orphans"]), 60)
+
+
 class TestNewRefPatterns(unittest.TestCase):
     """Los patrones sin ejemplar en el fixture se validan a nivel de regex,
     importando parse_export.py como modulo (solo stdlib)."""
