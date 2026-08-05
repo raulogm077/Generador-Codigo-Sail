@@ -2,7 +2,7 @@
 
 # Pantalla: Nueva solicitud (`DEMO_IFC_SolicitudForm`)
 **Tipo**: formulario
-**Usada desde**: `DEMO_PM_AprobarSolicitud` (formulario de arranque, nodo «Inicio», y formulario de la user task «Aprobar o rechazar» — `processModel/DEMO_PM_AprobarSolicitud.xml#n0,n3`) · `DEMO_RT_Solicitud` (vista «Resumen» — `recordType/DEMO_RT_Solicitud.xml#view-Resumen`). Sin aristas entrantes en `graph.json` (callers localizados por fallback sobre el export). · **Evidencia**: `content/DEMO_IFC_SolicitudForm.xml`
+**Usada desde**: `DEMO_PM_AprobarSolicitud` (formulario de arranque, nodo «Inicio», y formulario de la user task «Aprobar o rechazar» — `processModel/DEMO_PM_AprobarSolicitud.xml#n0,n3`) · `DEMO Solicitud` (vista «Resumen» — `recordType/DEMO_RT_Solicitud.xml#view-Resumen`). Sin aristas entrantes en `graph.json` (callers localizados por fallback sobre el export). · **Evidencia**: `content/DEMO_IFC_SolicitudForm.xml`
 
 ## Entradas (rule inputs)
 

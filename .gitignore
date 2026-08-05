@@ -11,3 +11,6 @@ desktop.ini
 # Settings locales de proyecto (nunca van al repo)
 .claude/*.local.md
 **/.claude/*.local.md
+
+# Salida intermedia que generan los tests dentro del fixture
+_doc_generada/
