@@ -1050,6 +1050,7 @@ def _sail_references(
     own_name: str | None,
     uuid_to_name: dict[str, str],
     type_by_name: dict[str, str] | None = None,
+    uuid_to_type: dict[str, str] | None = None,
 ) -> dict[str, list[str]]:
     """Extrae las referencias salientes de una expresion SAIL, POR TIPO.
 
@@ -1064,10 +1065,12 @@ def _sail_references(
     desapareceria en silencio al filtrar.
     """
     type_by_name = type_by_name or {}
+    uuid_to_type = uuid_to_type or {}
     buckets: dict[str, list[str]] = {
         "referencedRules": [],
         "referencedInterfaces": [],
         "referencedDecisions": [],
+        "referencedConstants": [],
         "referencedUnresolved": [],
         "referencedRecordTypes": [],
     }
@@ -1075,15 +1078,38 @@ def _sail_references(
         "expressionRule": "referencedRules",
         "interface": "referencedInterfaces",
         "decision": "referencedDecisions",
+        "constant": "referencedConstants",
+        "recordType": "referencedRecordTypes",
     }
-    for m in REF_PATTERNS["expressionRule"].finditer(sail):
-        nm = m.group(1)
-        if nm == own_name:
+
+    def add(nombre: str | None, tipo: str) -> None:
+        if not nombre or nombre == own_name:
+            return
+        key = bucket_of.get(tipo, "referencedUnresolved")
+        if nombre not in buckets[key]:
+            buckets[key].append(nombre)
+
+    # Sintaxis del Designer (SAIL escrito a mano o exports antiguos).
+    for key in ("expressionRule", "constant"):
+        for m in REF_PATTERNS[key].finditer(sail):
+            add(m.group(1), type_by_name.get(m.group(1), ""))
+
+    # Formato CANONICO — el que trae un export real. Sin esto,
+    # `referencedRules` salia vacio en las 27 interfaces de una app real: sus
+    # llamadas son `#"_a-...uuid..."`, no `rule!Nombre`.
+    for m in REF_PATTERNS["canonicalRef"].finditer(sail):
+        token = m.group(1).strip()
+        if not token or token.startswith(CANONICAL_IGNORED_PREFIXES):
             continue
-        key = bucket_of.get(type_by_name.get(nm, ""), "referencedUnresolved")
-        if nm not in buckets[key]:
-            buckets[key].append(nm)
-    for pat in (RT_FIELD_UUID_RE, REF_PATTERNS["uuidRecordType"]):
+        nombre = uuid_to_name.get(token)
+        if nombre:
+            add(nombre, uuid_to_type.get(token, ""))
+        elif token in type_by_name:
+            add(token, type_by_name[token])
+        else:
+            add(token, "")  # dependencia no exportada: va a referencedUnresolved
+
+    for pat in (RT_FIELD_UUID_RE, REF_PATTERNS["uuidRecordType"], REF_PATTERNS["recordFieldRef"]):
         for m in pat.finditer(sail):
             nm = uuid_to_name.get(m.group(1), m.group(1))
             if nm not in buckets["referencedRecordTypes"]:
@@ -1103,11 +1129,22 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
     # Precedencia identica a cmd_graph para resolver `rule!X`: una interfaz y
     # una expression rule pueden llamarse igual, y el grafo y el detalle no
     # deben discrepar nunca.
+    # El orden importa: el ULTIMO gana. Los tres de `rule!` van al final para
+    # conservar su precedencia si un nombre colisiona entre tipos.
     type_by_name: dict[str, str] = {}
-    for obj_type in ("decision", "interface", "expressionRule"):
+    for obj_type in ("recordType", "constant", "decision", "interface", "expressionRule"):
         for o in objects.get(obj_type, []):
             if isinstance(o, dict) and o.get("name"):
                 type_by_name[o["name"]] = obj_type
+    # Las referencias canonicas llegan por UUID: hace falta saber de que tipo es
+    # cada uno para meterlo en su bucket (regla, interfaz, constante...).
+    uuid_to_type = {
+        o["uuid"]: obj_type
+        for obj_type, objs in objects.items()
+        if isinstance(objs, list)
+        for o in objs
+        if isinstance(o, dict) and o.get("uuid")
+    }
 
     detail: dict[str, dict[str, Any]] = {
         "recordTypes": {},
@@ -1190,7 +1227,9 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             if inner is None:
                 continue
             sail = mask_sail(_sail_of(inner))
-            refs = _sail_references(sail, o.get("name"), uuid_to_name, type_by_name)
+            refs = _sail_references(
+                sail, o.get("name"), uuid_to_name, type_by_name, uuid_to_type
+            )
             detail[section][o["name"]] = {
                 "uuid": o.get("uuid"),
                 "path": o["path"],

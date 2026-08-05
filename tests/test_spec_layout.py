@@ -188,6 +188,22 @@ class SpecLayoutTestCase(unittest.TestCase):
             self.con_nav("Ver [regla](reglas-catalogo.md#ruledemo_r).")))
         self.assertEqual(proc.returncode, 0, proc.stdout)
 
+    def test_ancla_de_titulo_con_emoji_no_es_falso_positivo(self):
+        """Regresion de la 1a ejecucion real: `### 5.1 🔴 Las candidaturas` deja
+        dos espacios al quitar el emoji, y GitHub genera DOS guiones. El gate
+        los colapsaba y marcaba como rota toda ancla hacia un titulo con emoji
+        — que en esta skill son casi todos, porque el contrato los exige."""
+        docs = self.base_docs()
+        docs["10-especificacion/hallazgos.md"] = (
+            "# Hallazgos\n\n### 5.1 🔴 Las candidaturas quedan bloqueadas\nTexto.\n"
+        )
+        docs["10-especificacion/navegacion.md"] = (
+            "# Nav\n\n## site!DEMO_S\n"
+            "Ver [hallazgo](hallazgos.md#51--las-candidaturas-quedan-bloqueadas).\n"
+        )
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
     def test_enlace_al_principio_del_documento_no_es_ancla_rota(self):
         proc = self.run_gate(self.make_doc(self.con_nav("[Subir](#)")))
         self.assertEqual(proc.returncode, 0, proc.stdout)

@@ -88,11 +88,19 @@ CRITERIO_RE = re.compile(r"^\s*[-*]\s+\[[ xX]\]")
 
 
 def slug(texto: str) -> str:
-    """Slugificacion estilo GitHub (suficiente para las anclas que generamos)."""
+    """Slugificacion estilo GitHub.
+
+    GitHub convierte CADA espacio en un guion, sin colapsar los consecutivos.
+    Importa mas de lo que parece: un titulo como `### 5.1 🔴 Las candidaturas`
+    pierde el emoji y deja dos espacios, asi que su ancla real es
+    `#51--las-candidaturas` con DOS guiones. Colapsandolos, el gate marcaba como
+    rota toda ancla hacia un titulo con emoji o con doble espacio — es decir,
+    casi todas las de una salida real, que usa emojis por contrato.
+    """
     s = texto.strip().lower()
     s = re.sub(r"[`*_]", "", s)
     s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
-    return re.sub(r"\s+", "-", s).strip("-")
+    return re.sub(r"\s", "-", s).strip("-")
 
 
 def strip_code_blocks(texto: str) -> str:
