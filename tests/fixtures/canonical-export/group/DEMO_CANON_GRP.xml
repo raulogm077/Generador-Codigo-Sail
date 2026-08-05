@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Los grupos llevan UUID con prefijo `_e-`, no `_a-` como los objetos de
+     content. Fijando el prefijo a `_a-`, los 8 grupos del export real salian
+     huerfanos los 8. -->
+<groupHaul xmlns:a="http://www.appian.com/ae/types/2009">
+  <versionUuid>00000000-0000-0000-0000-0000000000ea</versionUuid>
+  <group>
+    <name>DEMO Canon Admins</name>
+    <uuid>_e-00000000-0000-8000-0000-000000000000_9001</uuid>
+    <groupType>Standard</groupType>
+  </group>
+</groupHaul>

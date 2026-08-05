@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Interfaz en el FORMATO CANONICO que Appian exporta de verdad: los
+     componentes son #"SYSTEM_SYSRULES_*" (no a!*), los objetos propios se
+     referencian por UUID entre #"..." (no rule!/cons!) y los campos de record
+     viajan como urn:appian:record-field:v1:{recordTypeUuid}/{fieldUuid}. -->
+<contentHaul xmlns:a="http://www.appian.com/ae/types/2009">
+    <versionUuid>_a-00000000-0000-8000-0000-000000000000_0011</versionUuid>
+    <interface>
+        <name>DEMO_CANON_Form</name>
+        <uuid>_a-00000000-0000-8000-0000-000000000000_0001</uuid>
+        <description>Formulario de alta en formato canonico.</description>
+        <definition>#"SYSTEM_SYSRULES_formLayout_v2"(
+  titleBar: "Alta",
+  contents: {
+    #"SYSTEM_SYSRULES_textField"(
+      label: "Nombre",
+      value: ri!registro[#"urn:appian:record-field:v1:00000000-0000-0000-0000-0000000000c1/00000000-0000-0000-0000-0000000000f1"],
+      saveInto: ri!registro[#"urn:appian:record-field:v1:00000000-0000-0000-0000-0000000000c1/00000000-0000-0000-0000-0000000000f1"]
+    ),
+    #"SYSTEM_SYSRULES_dropdownField"(
+      label: "Estado",
+      choiceLabels: #"_a-00000000-0000-8000-0000-000000000000_0003",
+      validations: #"_a-00000000-0000-8000-0000-000000000000_0002"(importe: ri!importe)
+    )
+  }
+)</definition>
+    </interface>
+</contentHaul>

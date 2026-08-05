@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<contentHaul xmlns:a="http://www.appian.com/ae/types/2009">
+    <versionUuid>_a-00000000-0000-8000-0000-000000000000_0013</versionUuid>
+    <constant>
+        <name>DEMO_CANON_ESTADOS</name>
+        <uuid>_a-00000000-0000-8000-0000-000000000000_0003</uuid>
+        <description>Dominio de estados.</description>
+        <typeRef>Text</typeRef>
+        <value>BORRADOR;ENVIADO</value>
+    </constant>
+</contentHaul>

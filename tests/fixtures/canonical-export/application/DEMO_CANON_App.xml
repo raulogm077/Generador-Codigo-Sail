@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- La application LISTA todos los objetos de la app por UUID. Es un catalogo,
+     no un caller: si contara como referencia, ningun objeto seria huerfano
+     jamas y la deteccion de objetos muertos quedaria inservible. -->
+<applicationHaul xmlns:a="http://www.appian.com/ae/types/2009">
+  <versionUuid>00000000-0000-0000-0000-0000000000e9</versionUuid>
+  <application uuid="00000000-0000-0000-0000-0000000000aa" name="DEMO Canon App">
+    <description>Aplicacion de prueba en formato canonico.</description>
+    <objects>
+      <uuid>_a-00000000-0000-8000-0000-000000000000_0001</uuid>
+      <uuid>_a-00000000-0000-8000-0000-000000000000_0002</uuid>
+      <uuid>_a-00000000-0000-8000-0000-000000000000_0003</uuid>
+      <uuid>00000000-0000-0000-0000-0000000000c1</uuid>
+      <uuid>00000000-0000-0000-0000-0000000000d1</uuid>
+    </objects>
+  </application>
+</applicationHaul>

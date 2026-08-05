@@ -106,30 +106,50 @@ def find_first_text(elem: ET.Element, *names: str, max_depth: int = 6) -> str | 
     return walk(elem, 0)
 
 
-def extract_localized_name(elem: ET.Element) -> str | None:
-    for nm in elem.iter():
-        if strip_ns(nm.tag) != "name":
+def _name_from_element(nm: ET.Element) -> str | None:
+    if nm.text and nm.text.strip():
+        return nm.text.strip()
+    candidates: dict[str, str] = {}
+    for pair in nm.iter():
+        if strip_ns(pair.tag) != "pair":
             continue
-        if nm.text and nm.text.strip():
-            return nm.text.strip()
-        candidates: dict[str, str] = {}
-        for pair in nm.iter():
-            if strip_ns(pair.tag) != "pair":
-                continue
-            lang = None
-            value = None
-            for child in pair:
-                if strip_ns(child.tag) == "locale":
-                    lang = (child.attrib.get("lang") or "").lower()
-                elif strip_ns(child.tag) == "value":
-                    value = (child.text or "").strip()
-            if value:
-                candidates[lang or ""] = value
-        for k in ("es", "en", ""):
-            if candidates.get(k):
-                return candidates[k]
-        if candidates:
-            return next(iter(candidates.values()))
+        lang = None
+        value = None
+        for child in pair:
+            if strip_ns(child.tag) == "locale":
+                lang = (child.attrib.get("lang") or "").lower()
+            elif strip_ns(child.tag) == "value":
+                value = (child.text or "").strip()
+        # Los exports reales traen el par de un idioma VACIO (<value/>): si se
+        # aceptara, el nombre saldria a medias.
+        if value:
+            candidates[lang or ""] = value
+    for k in ("es", "en", ""):
+        if candidates.get(k):
+            return candidates[k]
+    if candidates:
+        return next(iter(candidates.values()))
+    return None
+
+
+def extract_localized_name(elem: ET.Element) -> str | None:
+    """Nombre del objeto, priorizando el <name> que es HIJO DIRECTO.
+
+    Un process model real lleva <name> anidados que no son suyos —el del
+    timer-trigger, el de cada nodo, el de cada variable—. Recorriendo todos los
+    descendientes salia el primero que tuviera texto: los batches del export
+    real se llamaban `Timer_1`.
+    """
+    for nm in elem:
+        if strip_ns(nm.tag) == "name":
+            nombre = _name_from_element(nm)
+            if nombre:
+                return nombre
+    for nm in elem.iter():
+        if strip_ns(nm.tag) == "name":
+            nombre = _name_from_element(nm)
+            if nombre:
+                return nombre
     return None
 
 
@@ -258,6 +278,19 @@ def cmd_check(root: Path) -> int:
     return 1
 
 
+def _has_timer_trigger(pm_root: ET.Element) -> bool:
+    """True si el modelo arranca por temporizador.
+
+    Un export real no lo declara en el nodo de start: lo lleva en
+    <pre-triggers><timer-trigger><recurrence>, y `recurrence` es un elemento CON
+    HIJOS — buscar su texto devolvia None y ningun batch se detectaba.
+    """
+    return any(
+        strip_ns(el.tag) in ("timer-trigger", "timerTrigger", "recurrence")
+        for el in pm_root.iter()
+    )
+
+
 def _detect_start_type(pm_root: ET.Element) -> str:
     for node in pm_root.iter():
         if strip_ns(node.tag) == "node" and node.attrib.get("type") in {"start", "startEvent"}:
@@ -270,7 +303,7 @@ def _detect_start_type(pm_root: ET.Element) -> str:
                 if strip_ns(sub.tag) == "messageTrigger":
                     return "message"
             return "none"
-    return "unknown"
+    return "timer" if _has_timer_trigger(pm_root) else "unknown"
 
 
 def extract_haul_object(path: Path, haul_root: ET.Element) -> dict[str, Any] | None:
@@ -283,11 +316,21 @@ def extract_haul_object(path: Path, haul_root: ET.Element) -> dict[str, Any] | N
     if base_type == "content":
         inner = first_relevant_child(haul_root)
     else:
-        for child in haul_root:
-            t = strip_ns(child.tag)
-            if t == base_type or t == base_type.replace("Type", "type"):
-                inner = child
-                break
+        alias = HAUL_INNER_ALIASES.get(base_type, ())
+        candidatos = {base_type, base_type.replace("Type", "type"), *alias}
+        # Busqueda en profundidad limitada: en un export real el process model
+        # no cuelga del haul, va dentro de <process_model_port><pm>. Buscando
+        # solo hijos directos, `inner` acababa siendo <versionUuid> y todo
+        # (nombre, nodos, recurrencia) se leia del sitio equivocado.
+        pendientes = [(haul_root, 0)]
+        while pendientes and inner is None:
+            el, nivel = pendientes.pop(0)
+            for child in el:
+                if strip_ns(child.tag) in candidatos:
+                    inner = child
+                    break
+                if nivel < 2:
+                    pendientes.append((child, nivel + 1))
         if inner is None:
             inner = first_relevant_child(haul_root) or haul_root
 
@@ -301,10 +344,14 @@ def extract_haul_object(path: Path, haul_root: ET.Element) -> dict[str, Any] | N
         if inner_tag not in CONTENT_SUBTYPES:
             obj_type = "content"
 
+    # extract_localized_name ANTES que find_first_text: aquella prioriza el
+    # <name> hijo directo (el del objeto), esta busca en profundidad y se
+    # quedaba con el primero que tuviera texto — el <name> del timer-trigger,
+    # asi que los batches del export real se llamaban "Timer_1".
     name = (
         get_attr_any(inner, "name", "displayName")
-        or find_first_text(inner, "name", "displayName", "label", "pluralName", "staticName")
         or extract_localized_name(inner)
+        or find_first_text(inner, "name", "displayName", "label", "pluralName", "staticName")
         or path.stem
     )
     uuid = (
@@ -331,7 +378,11 @@ def extract_haul_object(path: Path, haul_root: ET.Element) -> dict[str, Any] | N
         for meta_el in inner.iter():
             if strip_ns(meta_el.tag) != "meta":
                 continue
-            for cand_tag in ("process-name", "name"):
+            # `name` ANTES que `process-name`: el primero es el nombre del
+            # MODELO y el segundo la expresion que nombra cada INSTANCIA
+            # (="X - " & pp!starttime). Al reves, y tras limpiarle las comillas,
+            # los process models quedaban bautizados "X - ".
+            for cand_tag in ("name", "process-name"):
                 for child in meta_el:
                     if strip_ns(child.tag) != cand_tag:
                         continue
@@ -400,7 +451,7 @@ def extract_haul_object(path: Path, haul_root: ET.Element) -> dict[str, Any] | N
         meta["nodeCount"] = node_count
         meta["subProcessCount"] = sub_count
         meta["userTaskCount"] = user_task_count
-        if find_first_text(inner, "recurrence"):
+        if _has_timer_trigger(inner):
             meta["hasRecurrence"] = True
     elif obj_type == "site":
         page_count = sum(1 for n in inner.iter() if strip_ns(n.tag) in ("page", "sitePage"))
@@ -476,7 +527,33 @@ def cmd_inventory(root: Path) -> dict[str, Any]:
     return {"counts": counts, "objects": dict(inventory), "parseErrors": parse_errors}
 
 
+# Como se llama de verdad el elemento del objeto dentro de su <xxxHaul>. Los
+# exports reales no siempre usan el nombre del tipo: un process model vive en
+# <process_model_port><pm>.
+HAUL_INNER_ALIASES = {
+    "processModel": ("pm", "process_model", "process-model"),
+    "recordType": ("record_type",),
+    "dataStore": ("data_store", "datastore"),
+}
+
+
 REF_PATTERNS = {
+    # --- Formato CANONICO: el que Appian exporta de verdad --------------------
+    # En el Designer se escribe `rule!MiRegla(...)`, pero el XML exportado lleva
+    # la forma canonica `#"{uuid}"(...)`. En un export real de 106 objetos,
+    # `rule!`, `cons!` y `recordType!` tenian CERO apariciones — el grafo daba
+    # 91 huerfanos y habria hecho descartar media aplicacion por "0 callers".
+    "canonicalRef": re.compile(r'#"([^"\n]{2,300})"'),
+    # Los roleMap referencian grupos con un UUID de prefijo distinto (`_e-`).
+    "groupUuid": re.compile(
+        r"<(?:[\w.\-]+:)?groupUuid>\s*([^<\s][^<]*?)\s*</(?:[\w.\-]+:)?groupUuid>"
+    ),
+    # {recordTypeUuid}/{fieldUuid}: el primero identifica el record type. Es la
+    # referencia mas frecuente con diferencia (960 apariciones en ese export).
+    "recordFieldRef": re.compile(
+        r"urn:appian:record-field:v1:([0-9a-fA-F\-]{36})/"
+    ),
+    # --- Formato del Designer / SAIL escrito a mano ---------------------------
     "expressionRule": re.compile(r"rule!([A-Za-z0-9_]+)"),
     "constant": re.compile(r"cons!([A-Za-z0-9_]+)"),
     "uuidRecordType": re.compile(r'urn:appian:record-type:v1:([0-9a-fA-F\-]{36})'),
@@ -515,6 +592,52 @@ STRUCT_REF_RULES = (
     ("variable", "type", ("cdt",), "variableType"),
 )
 
+# Barrido de UUIDs: red de seguridad para las referencias que viajan en tags o
+# atributos y no en expresiones (un record type lanza su related action con
+# <a:target a:uuid="...">). Sin esto, en el export real los 13 process models
+# salian huerfanos los 13.
+# El prefijo de letra varia con el tipo de objeto: `_a-` en los de content,
+# `_e-` en los grupos (<groupUuid> de los roleMap). Fijandolo a `_a-`, los 8
+# grupos del export real salian huerfanos los 8.
+ANY_UUID_RE = re.compile(
+    r"(_[a-z]-[0-9a-fA-F\-]{36}_\d+"
+    r"|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+)
+
+# Tipos que LISTAN objetos por contrato: son catalogos y contenedores, no
+# callers. La application enumera toda la app, asi que contarla como referencia
+# dejaria el concepto de huerfano sin sentido (mismo problema que INVENTARIO.md
+# en el gate de cobertura).
+CATALOG_SOURCE_TYPES = {"application", "folder", "knowledgeCenter", "processModelFolder"}
+
+# Prefijos de las referencias canonicas que NO son objetos del export:
+# `SYSTEM_SYSRULES_*` son los componentes de plataforma (a!formLayout se llama
+# asi por dentro) y los `urn:appian:*` tienen sus propios patrones.
+CANONICAL_IGNORED_PREFIXES = ("SYSTEM_", "urn:appian:", "http://", "https://")
+
+# Que clase de arista es una referencia canonica, segun lo que resulte ser el
+# destino (la forma `#"{uuid}"` no dice el tipo, hay que mirar el inventario).
+CANONICAL_REF_TYPE = {
+    "expressionRule": "ruleRef",
+    "interface": "ruleRef",
+    "decision": "ruleRef",
+    "webApi": "ruleRef",
+    "constant": "constRef",
+    "recordType": "recordTypeRef",
+    "processModel": "startProcess",
+    "integration": "integrationCall",
+    "connectedSystem": "connectedSystem",
+    "dataStore": "dataStoreEntity",
+    "group": "security",
+}
+
+# Precedencia al resolver una referencia canonica escrita por NOMBRE (algunos
+# exports antiguos lo hacen). Misma que la de `rule!`, ampliada.
+CANONICAL_NAME_PRECEDENCE = (
+    "expressionRule", "interface", "decision", "constant", "recordType",
+    "processModel", "integration", "connectedSystem", "dataStore", "group",
+)
+
 # Aristas que representan INVOCACION (A ejecuta B). Solo estas cuentan para
 # detectar ciclos: en Appian es normal y sano que un record type tenga como
 # vista una interfaz que consulta ese mismo record, y reportarlo como ciclo
@@ -524,7 +647,12 @@ CYCLE_REF_TYPES = {"ruleRef", "startProcess", "subprocess", "recordAction", "for
 # Puntos de entrada: nada dentro del export los invoca, asi que grado entrante 0
 # es su estado NORMAL y no evidencia de objeto muerto. Los process models con
 # recurrencia (batches) se anaden en tiempo de ejecucion.
-ENTRY_POINT_TYPES = {"application", "site", "webApi", "portal"}
+ENTRY_POINT_TYPES = {
+    "application", "site", "webApi", "portal",
+    # Contenedores: nadie los "llama", contienen. Grado entrante 0 es su estado
+    # normal y listarlos como huerfanos solo genera ruido.
+    "folder", "knowledgeCenter", "processModelFolder",
+}
 
 # Umbral de acoplamiento fuerte (grado entrante). Documentado en
 # references/analysis-workflow.md — si cambia aqui, cambia alli.
@@ -570,6 +698,14 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             "refType": ref_type,
         })
 
+    # Indice por nombre agnostico de tipo, para las referencias canonicas que
+    # vienen escritas por nombre en vez de por UUID.
+    name_any: dict[str, dict[str, Any]] = {}
+    for cand_type in reversed(CANONICAL_NAME_PRECEDENCE):
+        for (t, n), obj in name_index.items():
+            if t == cand_type:
+                name_any[n] = obj
+
     for obj_type, objs in inventory.get("objects", {}).items():
         for o in objs:
             p = Path(o["path"])
@@ -577,6 +713,35 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
                 content = p.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
+            # Referencias canonicas #"{uuid}" / #"{nombre}".
+            for m in REF_PATTERNS["canonicalRef"].finditer(content):
+                token = m.group(1).strip()
+                if not token or token.startswith(CANONICAL_IGNORED_PREFIXES):
+                    continue
+                target = uuid_index.get(token) or name_any.get(token)
+                if target and target is not o:
+                    add_edge(
+                        o,
+                        target,
+                        CANONICAL_REF_TYPE.get(target.get("type"), "canonicalRef"),
+                    )
+            for m in REF_PATTERNS["recordFieldRef"].finditer(content):
+                target = uuid_index.get(m.group(1))
+                if target and target is not o:
+                    add_edge(o, target, "recordFieldRef")
+            for m in REF_PATTERNS["groupUuid"].finditer(content):
+                tgt = m.group(1)
+                target = uuid_index.get(tgt) or name_index.get(("group", tgt))
+                if target and target is not o:
+                    add_edge(o, target, "security")
+            # Barrido de UUIDs. refType generico a proposito: sabemos que hay
+            # una referencia, no de que clase — no vale para inferir invocacion
+            # (por eso `uuidRef` no cuenta para los ciclos).
+            if obj_type not in CATALOG_SOURCE_TYPES:
+                for token in set(ANY_UUID_RE.findall(content)):
+                    target = uuid_index.get(token)
+                    if target and target is not o:
+                        add_edge(o, target, "uuidRef")
             for m in REF_PATTERNS["expressionRule"].finditer(content):
                 # rule! puede apuntar a expression rule, interfaz o decision (bug
                 # de interfaces-huerfanas: antes solo se probaba expressionRule).

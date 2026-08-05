@@ -90,6 +90,27 @@ find . -name '*.icf'
 find . -name '*.properties'
 ```
 
+## 🔴 El SAIL exportado viene en FORMATO CANÓNICO (leer antes de documentar nada)
+
+Lo que se ve en el Designer **no** es lo que viaja en el XML. Un export real no contiene ni una sola aparición de `rule!`, `cons!` o `a!textField`. Antes de describir una pantalla o una regla hay que traducir:
+
+| En el Designer (y en la documentación que escribes) | En el XML exportado |
+|---|---|
+| `a!formLayout(...)`, `a!textField(...)` | `#"SYSTEM_SYSRULES_formLayout_v2"(...)`, `#"SYSTEM_SYSRULES_textField"(...)` |
+| `rule!MI_REGLA(x: 1)` | `#"_a-0000f01f-…_2358028"(x: 1)` — por UUID, no por nombre |
+| `cons!MI_CONSTANTE` | `#"_a-0000f01f-…_2357817"` |
+| `recordType!{uuid}Nombre` | `#"urn:appian:record-type:v1:{uuid}"` |
+| `recordType!{uuid}Nombre.fields.{uuid}campo` | `#"urn:appian:record-field:v1:{rtUuid}/{fieldUuid}"` |
+
+Reglas de lectura:
+
+- **`SYSTEM_SYSRULES_<X>` es el componente `a!<X>`.** Quita el prefijo y el sufijo de versión (`_v1`, `_v2`) para nombrar el componente en la ficha: `SYSTEM_SYSRULES_richTextItem_v1` → `a!richTextItem`. El sufijo de versión es de plataforma, no del diseño de la app.
+- **Los UUID `#"_a-…"` hay que resolverlos contra el inventario** para saber a qué objeto apuntan. `_intermedio/graph.json` ya lo hace: consulta ahí los callers en vez de leer UUIDs a ojo.
+- **`#"urn:appian:record-field:v1:{rtUuid}/{fieldUuid}"`**: el primer UUID es el record type y el segundo el campo. Para nombrar el campo, búscalo en `detail.json`.
+- En la documentación **escribe siempre la forma del Designer** (`a!textField`, `rule!MI_REGLA`): es la que el lector reconoce y la que necesita para reconstruir. Deja el UUID solo en la línea de Evidencia.
+
+Ojo también con el **nombre de los process models**: el `<meta>` trae `name` (el del modelo) y `process-name` (la expresión que nombra cada instancia, tipo `="X - " & pp!starttime`). El bueno es el primero.
+
 ## Detección de dependencias entre objetos
 
 Patrones de referencia entre objetos en SAIL/expresiones:

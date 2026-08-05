@@ -100,6 +100,8 @@ Antes de generar nada: preguntar formatos de salida y, si el objetivo huele a re
 | `a!integrationCall(integration: ` | Llamada a integration |
 | `a!isUserMemberOfGroup(…)` | Check de seguridad |
 
+> 🔴 **Los patrones de arriba son la sintaxis del Designer, y un export real NO la contiene.** El XML trae la forma canónica: `#"_a-…uuid…"` en vez de `rule!`/`cons!`, `#"SYSTEM_SYSRULES_textField"` en vez de `a!textField`, y `#"urn:appian:record-field:v1:{rt}/{campo}"` para los campos. El parser resuelve las dos formas; **tú tienes que saber leer la canónica** antes de describir una pantalla — tabla de traducción en `appian-objects-guide.md`.
+
 Y las **referencias estructurales**, que no viajan en SAIL sino en tags y atributos del XML — sin ellas el formulario principal de una app puede salir huérfano pese a estar en un site, en un start event y en una vista de record:
 
 | Patrón | Significa |

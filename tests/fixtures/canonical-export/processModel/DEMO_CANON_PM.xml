@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Process model con la jerarquia REAL de un export Appian:
+     processModelHaul > process_model_port > pm > meta.  NO existe un elemento
+     <processModel>, que era lo unico que el parser buscaba.
+
+     Tres trampas mas, todas del export real:
+     - <meta> trae `name` (el del MODELO) y `process-name` (la expresion que
+       nombra cada INSTANCIA). Prefiriendo esta ultima, todos los process models
+       salian como "DEMO_CANON_PM - " en inventario, grafo y documentacion.
+     - El par en español esta VACIO (<value/>).
+     - La recurrencia va en <pre-triggers><timer-trigger><recurrence>, un
+       elemento CON HIJOS: buscar su texto no lo encontraba. -->
+<processModelHaul xmlns:a="http://www.appian.com/ae/types/2009">
+  <versionUuid>00000000-0000-0000-0000-0000000000e2</versionUuid>
+  <folderUuid>00000000-0000-0000-0000-0000000000f9</folderUuid>
+  <roleMap>
+    <role name="ADMIN_OWNER">
+      <users/>
+      <groups>
+        <groupUuid>_e-00000000-0000-8000-0000-000000000000_9001</groupUuid>
+      </groups>
+    </role>
+  </roleMap>
+  <process_model_port>
+    <pm>
+      <meta>
+        <uuid>00000000-0000-0000-0000-0000000000d1</uuid>
+        <name>
+          <string-map>
+            <pair>
+              <locale country="US" lang="en" variant=""/>
+              <value><![CDATA[DEMO_CANON_PM]]></value>
+            </pair>
+            <pair>
+              <locale country="" lang="es" variant=""/>
+              <value/>
+            </pair>
+          </string-map>
+        </name>
+        <desc>
+          <string-map>
+            <pair>
+              <locale country="US" lang="en" variant=""/>
+              <value><![CDATA[Batch nocturno de revision.]]></value>
+            </pair>
+          </string-map>
+        </desc>
+        <process-name>
+          <string-map>
+            <pair>
+              <locale country="US" lang="en" variant=""/>
+              <value><![CDATA[="DEMO_CANON_PM - " & pp!starttime]]></value>
+            </pair>
+          </string-map>
+        </process-name>
+      </meta>
+      <pvs/>
+      <nodes>
+        <node type="userInput" name="Rellenar formulario" id="c0">
+          <acps>
+            <acp>
+              <expr>#"_a-00000000-0000-8000-0000-000000000000_0001"(registro: pv!registro)</expr>
+            </acp>
+          </acps>
+        </node>
+      </nodes>
+      <pre-triggers>
+        <timer-trigger index="0">
+          <persistentId>00000000-0000-0000-0000-0000000000b1</persistentId>
+          <name><![CDATA[Timer_1]]></name>
+          <schedule absoluteDelay="false" isAbsoluteOrRelative="true" isRecurring="true">
+            <interval><minutes>0</minutes></interval>
+          </schedule>
+          <recurrence>
+            <recurring-interval type="3">
+              <monthly weekdaybased="false">
+                <day-of-month>1</day-of-month>
+              </monthly>
+              <time>03:30:00Z</time>
+            </recurring-interval>
+          </recurrence>
+        </timer-trigger>
+      </pre-triggers>
+    </pm>
+  </process_model_port>
+</processModelHaul>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- El UUID del record type va en un ATRIBUTO CON NAMESPACE (a:uuid) y es
+     canonico de 36 caracteres, a diferencia de los objetos de content. -->
+<recordTypeHaul xmlns:a="http://www.appian.com/ae/types/2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <versionUuid>00000000-0000-0000-0000-0000000000e1</versionUuid>
+  <recordType a:uuid="00000000-0000-0000-0000-0000000000c1" name="DEMO Registro">
+    <a:pluralName>DEMO Registros</a:pluralName>
+    <a:description>Record type de registros.</a:description>
+    <a:urlStub>demo-registro</a:urlStub>
+    <a:source xsi:type="a:RecordsReplica"/>
+    <a:titleExpr>rv!record[#"urn:appian:record-field:v1:00000000-0000-0000-0000-0000000000c1/00000000-0000-0000-0000-0000000000f1"]</a:titleExpr>
+    <a:layoutType>GRID</a:layoutType>
+    <!-- Related action: el PM se referencia por UUID en un atributo, no en una
+         expresion. Es como un record type lanza un proceso. -->
+    <a:relatedActionCfg a:uuid="00000000-0000-0000-0000-0000000000a1">
+      <a:target a:uuid="00000000-0000-0000-0000-0000000000d1" xsi:type="a:ProcessModelTarget"/>
+    </a:relatedActionCfg>
+  </recordType>
+</recordTypeHaul>

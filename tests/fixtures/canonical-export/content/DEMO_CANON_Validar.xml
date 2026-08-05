@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<contentHaul xmlns:a="http://www.appian.com/ae/types/2009">
+    <versionUuid>_a-00000000-0000-8000-0000-000000000000_0012</versionUuid>
+    <expressionRule>
+        <name>DEMO_CANON_Validar</name>
+        <uuid>_a-00000000-0000-8000-0000-000000000000_0002</uuid>
+        <description>Valida el importe.</description>
+        <definition>if(ri!importe &gt; 100000, "Importe excesivo", null)</definition>
+    </expressionRule>
+</contentHaul>
