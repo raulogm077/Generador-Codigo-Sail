@@ -10,6 +10,8 @@ Comandos:
   python3 parse_export.py --inventory <ruta> [--out <ruta_json>]
   python3 parse_export.py --graph <ruta> [--out <ruta_json>]
   python3 parse_export.py --all <ruta> --out-dir <ruta_dir>
+  python3 parse_export.py --detail <ruta> [--out <ruta_json>]
+      (por defecto escribe <ruta>/_doc_generada/_intermedio/detail.json)
 """
 from __future__ import annotations
 
@@ -33,6 +35,7 @@ HAUL_TO_TYPE = {
     "connectedSystemHaul": "connectedSystem",
     "groupHaul": "group",
     "groupTypeHaul": "groupType",
+    "dataStoreHaul": "dataStore",
     "contentHaul": "content",
 }
 
@@ -185,6 +188,22 @@ def _mask_url(url: str | None) -> str | None:
     return re.sub(r"(https?://)([^/:]+):([^@/]+)@", lambda m: m.group(1) + m.group(2) + ":***@", url)
 
 
+def mask_sail(sail: str) -> str:
+    """Enmascara secretos dentro de SAIL con las mismas reglas que los valores
+    sueltos: URLs con credenciales y literales de texto que parecen secretos."""
+    if not sail:
+        return sail
+    sail = _mask_url(sail) or sail
+
+    def _mask_literal(m: re.Match) -> str:
+        inner = m.group(1)
+        if looks_like_secret_value(inner):
+            return '"' + mask(inner) + '"'
+        return m.group(0)
+
+    return re.sub(r'"([^"\n]{6,})"', _mask_literal, sail)
+
+
 def walk_xml_files(root: Path):
     for path in root.rglob("*"):
         if path.is_file() and path.suffix.lower() in {".xml", ".xsd", ".bpmn"}:
@@ -200,7 +219,7 @@ def cmd_check(root: Path) -> int:
                 elem = safe_parse(f)
                 if elem is not None and strip_ns(elem.tag) == "applicationHaul":
                     hints.append(f"applicationHaul en {f.relative_to(root)}")
-    for sub in ["processModel", "recordType", "site", "datatype", "group", "connectedSystem", "content", "META-INF", "processModelFolder"]:
+    for sub in ["processModel", "recordType", "site", "datatype", "group", "connectedSystem", "content", "META-INF", "processModelFolder", "dataStore"]:
         d = root / sub
         if d.exists() and d.is_dir():
             n = sum(1 for _ in d.iterdir())
@@ -463,6 +482,13 @@ REF_PATTERNS = {
     "uuidRecordType": re.compile(r'urn:appian:record-type:v1:([0-9a-f\-]{36})'),
     "startProcess": re.compile(r"a!startProcess\s*\(\s*processModel\s*:\s*([A-Za-z0-9_!\{\}\-]+)"),
     "integrationCall": re.compile(r"a!integrationCall\s*\(\s*integration\s*:\s*([A-Za-z0-9_!\{\}\-]+)"),
+    # Patrones documentados en analysis-workflow.md que faltaban:
+    "queryEntity": re.compile(r"a!queryEntity\s*\(\s*entity\s*:\s*cons!([A-Za-z0-9_]+)"),
+    "writeEntity": re.compile(r"a!writeToDataStoreEntity\s*\(\s*dataStoreEntity\s*:\s*cons!([A-Za-z0-9_]+)"),
+    "writeRecords": re.compile(r"a!writeRecords\s*\([\s\S]{0,400}?\{([0-9a-fA-F\-]{36})\}"),
+    "subprocess": re.compile(r"<processModelUuid>\s*([0-9a-fA-F\-]{36})\s*</processModelUuid>"),
+    "memberOfGroup": re.compile(r"a!isUserMemberOfGroup\s*\([\s\S]{0,200}?groups?\s*:\s*(?:cons!)?([A-Za-z0-9_]+)"),
+    "connectedSystemRef": re.compile(r"<connectedSystemRef>\s*([^<\s][^<]*?)\s*</connectedSystemRef>"),
 }
 
 
@@ -497,7 +523,13 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
         if e in edge_set:
             return
         edge_set.add(e)
-        edges.append({"source": e[0], "target": e[1], "refType": ref_type})
+        edges.append({
+            "source": e[0],
+            "target": e[1],
+            "from": source.get("name"),
+            "to": target.get("name"),
+            "refType": ref_type,
+        })
 
     for obj_type, objs in inventory.get("objects", {}).items():
         for o in objs:
@@ -507,7 +539,13 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             except OSError:
                 continue
             for m in REF_PATTERNS["expressionRule"].finditer(content):
-                target = name_index.get(("expressionRule", m.group(1)))
+                # rule! puede apuntar a expression rule, interfaz o decision (bug
+                # de interfaces-huerfanas: antes solo se probaba expressionRule).
+                target = (
+                    name_index.get(("expressionRule", m.group(1)))
+                    or name_index.get(("interface", m.group(1)))
+                    or name_index.get(("decision", m.group(1)))
+                )
                 if target and target is not o:
                     add_edge(o, target, "ruleRef")
             for m in REF_PATTERNS["constant"].finditer(content):
@@ -528,6 +566,34 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
                 target = name_index.get(("integration", tgt)) or uuid_index.get(tgt)
                 if target and target is not o:
                     add_edge(o, target, "integrationCall")
+            for m in REF_PATTERNS["queryEntity"].finditer(content):
+                target = name_index.get(("constant", m.group(1)))
+                if target and target is not o:
+                    add_edge(o, target, "queryEntity")
+            for m in REF_PATTERNS["writeEntity"].finditer(content):
+                target = name_index.get(("constant", m.group(1)))
+                if target and target is not o:
+                    add_edge(o, target, "writeEntity")
+            for m in REF_PATTERNS["writeRecords"].finditer(content):
+                target = uuid_index.get(m.group(1))
+                if target and target is not o:
+                    add_edge(o, target, "writeRecords")
+            for m in REF_PATTERNS["subprocess"].finditer(content):
+                target = uuid_index.get(m.group(1))
+                if target and target is not o:
+                    add_edge(o, target, "subprocess")
+            for m in REF_PATTERNS["memberOfGroup"].finditer(content):
+                target = (
+                    name_index.get(("group", m.group(1)))
+                    or name_index.get(("constant", m.group(1)))
+                )
+                if target and target is not o:
+                    add_edge(o, target, "security")
+            for m in REF_PATTERNS["connectedSystemRef"].finditer(content):
+                tgt = m.group(1)
+                target = name_index.get(("connectedSystem", tgt)) or uuid_index.get(tgt)
+                if target and target is not o:
+                    add_edge(o, target, "connectedSystem")
 
     group_by_name = {g["name"]: g for g in inventory.get("objects", {}).get("group", []) if g.get("name")}
     for g in inventory.get("objects", {}).get("group", []):
@@ -540,7 +606,11 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
     for e in edges:
         indegree[e["target"]] += 1
         outdegree[e["source"]] += 1
-    orphans = [n["id"] for n in nodes if indegree[n["id"]] == 0 and n["type"] not in {"application", "site"}]
+    orphans = [
+        n["name"] or n["id"]
+        for n in nodes
+        if indegree[n["id"]] == 0 and n["type"] not in {"application", "site"}
+    ]
     hubs = sorted(
         ({"id": n["id"], "name": n["name"], "type": n["type"], "in": indegree[n["id"]]} for n in nodes if indegree[n["id"]] >= 5),
         key=lambda x: -x["in"],
@@ -559,6 +629,239 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _to_bool(val: str | None) -> bool:
+    return (val or "").strip().lower() in {"true", "1", "yes"}
+
+
+def _haul_inner(path: Path) -> ET.Element | None:
+    """Devuelve el elemento del objeto dentro de su envoltorio <xxxHaul>."""
+    haul_root = safe_parse(path)
+    if haul_root is None:
+        return None
+    base_type = HAUL_TO_TYPE.get(strip_ns(haul_root.tag))
+    if base_type is None:
+        return None
+    if base_type == "content":
+        return first_relevant_child(haul_root)
+    for child in haul_root:
+        t = strip_ns(child.tag)
+        if t == base_type or t == base_type.replace("Type", "type"):
+            return child
+    return first_relevant_child(haul_root) or haul_root
+
+
+RT_FIELD_UUID_RE = re.compile(r"recordType!\{([0-9a-fA-F\-]{36})\}")
+
+
+def _sail_of(inner: ET.Element) -> str:
+    for el in inner.iter():
+        if strip_ns(el.tag) == "definition" and el.text:
+            return el.text.strip()
+    return ""
+
+
+def _rule_inputs_of(inner: ET.Element) -> list[dict[str, Any]]:
+    out = []
+    for el in inner.iter():
+        if strip_ns(el.tag) != "ruleInput":
+            continue
+        out.append({
+            "name": get_attr_any(el, "name") or find_first_text(el, "name"),
+            "type": get_attr_any(el, "type") or find_first_text(el, "type", "typeName"),
+            "required": _to_bool(get_attr_any(el, "required")),
+        })
+    return out
+
+
+def _sail_references(sail: str, own_name: str | None, uuid_to_name: dict[str, str]) -> tuple[list[str], list[str]]:
+    rules: list[str] = []
+    for m in REF_PATTERNS["expressionRule"].finditer(sail):
+        nm = m.group(1)
+        if nm != own_name and nm not in rules:
+            rules.append(nm)
+    rts: list[str] = []
+    for pat in (RT_FIELD_UUID_RE, REF_PATTERNS["uuidRecordType"]):
+        for m in pat.finditer(sail):
+            nm = uuid_to_name.get(m.group(1), m.group(1))
+            if nm not in rts:
+                rts.append(nm)
+    return rules, rts
+
+
+def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
+    objects = inventory.get("objects", {})
+    uuid_to_name = {
+        o["uuid"]: o["name"]
+        for objs in objects.values()
+        if isinstance(objs, list)
+        for o in objs
+        if isinstance(o, dict) and o.get("uuid") and o.get("name")
+    }
+    detail: dict[str, dict[str, Any]] = {
+        "recordTypes": {},
+        "interfaces": {},
+        "expressionRules": {},
+        "processModels": {},
+        "decisions": {},
+        "constants": {},
+        "dataStores": {},
+        "cdts": {},
+    }
+
+    for o in objects.get("recordType", []):
+        inner = _haul_inner(Path(o["path"]))
+        if inner is None:
+            continue
+        entry: dict[str, Any] = {"uuid": o.get("uuid"), "path": o["path"], "fields": [], "relationships": [], "views": [], "actions": []}
+        for el in inner.iter():
+            tag = strip_ns(el.tag)
+            if tag == "field":
+                entry["fields"].append({
+                    "name": get_attr_any(el, "name"),
+                    "type": get_attr_any(el, "type"),
+                    "required": _to_bool(get_attr_any(el, "required")),
+                })
+            elif tag == "relationship":
+                entry["relationships"].append({
+                    "name": get_attr_any(el, "name"),
+                    "target": get_attr_any(el, "target", "targetRecordType"),
+                    "type": get_attr_any(el, "type", "relationshipType"),
+                })
+            elif tag in ("view", "recordView"):
+                nm = get_attr_any(el, "name")
+                if nm:
+                    entry["views"].append(nm)
+            elif tag in ("action", "recordAction", "relatedAction"):
+                nm = get_attr_any(el, "name")
+                if nm:
+                    entry["actions"].append(nm)
+        detail["recordTypes"][o["name"]] = entry
+
+    for section, obj_type in (("interfaces", "interface"), ("expressionRules", "expressionRule")):
+        for o in objects.get(obj_type, []):
+            inner = _haul_inner(Path(o["path"]))
+            if inner is None:
+                continue
+            sail = mask_sail(_sail_of(inner))
+            rules, rts = _sail_references(sail, o.get("name"), uuid_to_name)
+            detail[section][o["name"]] = {
+                "uuid": o.get("uuid"),
+                "path": o["path"],
+                "ruleInputs": _rule_inputs_of(inner),
+                "referencedRules": rules,
+                "referencedRecordTypes": rts,
+                "sail": sail,
+            }
+
+    for o in objects.get("processModel", []):
+        inner = _haul_inner(Path(o["path"]))
+        if inner is None:
+            continue
+        pvs: list[dict[str, Any]] = []
+        for container in inner.iter():
+            if strip_ns(container.tag) not in ("processVariables", "pvs"):
+                continue
+            for var in container:
+                if strip_ns(var.tag) not in ("variable", "pv", "processVariable"):
+                    continue
+                pvs.append({
+                    "name": get_attr_any(var, "name") or find_first_text(var, "name"),
+                    "type": get_attr_any(var, "type") or find_first_text(var, "type-name", "type", "typeName"),
+                    "isParameter": _to_bool(get_attr_any(var, "parameter") or find_first_text(var, "parameter")),
+                })
+        nodes: list[dict[str, Any]] = []
+        for el in inner.iter():
+            if strip_ns(el.tag) != "node":
+                continue
+            node: dict[str, Any] = {
+                "id": get_attr_any(el, "id", "uuid"),
+                "name": get_attr_any(el, "name") or find_first_text(el, "name", max_depth=2),
+                "type": get_attr_any(el, "type"),
+            }
+            assignees = find_first_text(el, "assignees", "assignee", max_depth=2)
+            if assignees:
+                node["assignees"] = assignees
+            expr = find_first_text(el, "expression", "condition", "outputExpr", max_depth=2)
+            if expr:
+                node["expressionSummary"] = mask_sail(expr)[:300]
+            form = find_first_text(el, "form", max_depth=2)
+            if form:
+                node["form"] = form
+            nodes.append(node)
+        detail["processModels"][o["name"]] = {
+            "uuid": o.get("uuid"),
+            "path": o["path"],
+            "processVariables": pvs,
+            "nodes": nodes,
+        }
+
+    for o in objects.get("decision", []):
+        inner = _haul_inner(Path(o["path"]))
+        if inner is None:
+            continue
+        entry = {"uuid": o.get("uuid"), "path": o["path"], "inputs": [], "outputs": [], "rows": []}
+        for el in inner.iter():
+            tag = strip_ns(el.tag)
+            if tag == "input":
+                entry["inputs"].append({"name": get_attr_any(el, "name"), "type": get_attr_any(el, "type")})
+            elif tag == "output":
+                entry["outputs"].append({"name": get_attr_any(el, "name"), "type": get_attr_any(el, "type")})
+            elif tag == "row":
+                conditions = [
+                    (c.text or "").strip()
+                    for c in el
+                    if strip_ns(c.tag) == "condition"
+                ]
+                result = next(
+                    ((c.text or "").strip() for c in el if strip_ns(c.tag) == "result"),
+                    None,
+                )
+                entry["rows"].append({"conditions": conditions, "result": result})
+        detail["decisions"][o["name"]] = entry
+
+    for o in objects.get("constant", []):
+        detail["constants"][o["name"]] = {
+            "uuid": o.get("uuid"),
+            "path": o["path"],
+            "value": o.get("value"),
+            "typeRef": o.get("typeRef"),
+            "maskedSecret": o.get("maskedSecret", False),
+        }
+
+    for o in objects.get("dataStore", []):
+        inner = _haul_inner(Path(o["path"]))
+        if inner is None:
+            continue
+        entities = [
+            {"name": get_attr_any(el, "name"), "cdt": get_attr_any(el, "cdt", "type", "typeRef")}
+            for el in inner.iter()
+            if strip_ns(el.tag) == "entity"
+        ]
+        detail["dataStores"][o["name"]] = {"uuid": o.get("uuid"), "path": o["path"], "entities": entities}
+
+    for o in objects.get("cdt", []):
+        xsd_root = safe_parse(Path(o["path"]))
+        if xsd_root is None:
+            continue
+        fields = []
+        for el in xsd_root.iter():
+            if strip_ns(el.tag) != "element" or "name" not in el.attrib:
+                continue
+            ftype = get_attr_any(el, "type") or ""
+            if ":" in ftype:
+                ftype = ftype.split(":", 1)[1]
+            min_occurs = el.attrib.get("minOccurs", "1")
+            fields.append({
+                "name": el.attrib["name"],
+                "type": ftype,
+                "required": min_occurs != "0",
+            })
+        detail["cdts"][o["name"]] = {"path": o["path"], "fields": fields}
+
+    counts = {k: len(v) for k, v in detail.items()}
+    return {"counts": counts, **detail}
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
@@ -566,10 +869,11 @@ def main(argv: list[str]) -> int:
     g.add_argument("--inventory", metavar="RUTA")
     g.add_argument("--graph", metavar="RUTA")
     g.add_argument("--all", metavar="RUTA")
+    g.add_argument("--detail", metavar="RUTA")
     ap.add_argument("--out", metavar="FICHERO")
     ap.add_argument("--out-dir", metavar="DIR")
     args = ap.parse_args(argv)
-    target = args.check or args.inventory or args.graph or args.all
+    target = args.check or args.inventory or args.graph or args.all or args.detail
     root = Path(target).resolve()
     if not root.exists():
         print(f"ERROR: la ruta {root} no existe", file=sys.stderr)
@@ -612,6 +916,16 @@ def main(argv: list[str]) -> int:
         print(f"Escritos: {out_dir / 'inventory.json'} y {out_dir / 'graph.json'}")
         print(f"Inventario: {inv['counts']}")
         print(f"Grafo: nodos={graph['stats']['nodeCount']}, aristas={graph['stats']['edgeCount']}, huerfanos={graph['stats']['orphanCount']}, hubs={graph['stats']['hubCount']}")
+        return 0
+    if args.detail:
+        inv = cmd_inventory(root)
+        detail = cmd_detail(root, inv)
+        out_path = Path(args.out) if args.out else root / "_doc_generada" / "_intermedio" / "detail.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
+            json.dumps(detail, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
+        )
+        print(f"Detalle escrito en {out_path} ({detail['counts']})")
         return 0
     return 0
 

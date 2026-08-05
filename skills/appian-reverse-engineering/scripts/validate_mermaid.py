@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
 validate_mermaid.py — Valida y sanea un diagrama Mermaid según las reglas
-del skill appian-reverse-engineering.
+del skill appian-reverse-engineering (references/mermaid-rules.md).
+
+Tipos soportados (dispatch por cabecera):
+    - Tipo A: flowchart TD/LR sin subgraph → saneado completo (renombrado N1..Nn,
+      etiquetas, tope de 30 nodos). Comportamiento histórico, sin cambios.
+    - Tipo B: erDiagram (modelo de datos) → validación de relaciones canónicas
+      (||--||, ||--o{, }o--||, }o--o{) y bloques de atributos emparejados.
+      SIN tope de nodos. Salida pass-through (no se reescribe).
+    - Tipo C: flowchart con subgraph (lanes BPMN-styled) → se validan las
+      aperturas/cierres emparejados (subgraph ... end). Salida pass-through
+      con cabecera normalizada (no se aplica el saneado destructivo del Tipo A).
 
 Uso:
     python validate_mermaid.py <fichero.mmd>
@@ -23,9 +33,23 @@ import re
 import argparse
 from typing import List, Tuple
 
-MAX_NODES = 30
+MAX_NODES = 30  # Solo aplica al Tipo A (flowchart sin subgraph).
 MAX_LABEL_LEN = 50
 ALLOWED_HEADERS = ("flowchart TD", "flowchart LR")
+
+# --- Tipo B (erDiagram) -------------------------------------------------------
+# Relaciones canónicas permitidas por mermaid-rules.md.
+RE_ER_REL = re.compile(
+    r'^(?P<left>[A-Za-z][A-Za-z0-9_]*)\s*'
+    r'(?P<card>\|\|--\|\||\|\|--o\{|\}o--\|\||\}o--o\{)\s*'
+    r'(?P<right>[A-Za-z][A-Za-z0-9_]*)'
+    r'(?:\s*:\s*(?P<label>"[^"]*"|\S.*?))?\s*$'
+)
+RE_ER_BLOCK_OPEN = re.compile(r'^(?P<name>[A-Za-z][A-Za-z0-9_]*)\s*\{$')
+RE_ER_ENTITY = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
+
+# --- Tipo C (flowchart con lanes) ---------------------------------------------
+RE_SUBGRAPH_OPEN = re.compile(r'^\s*subgraph\b')
 
 # Regex aproximadas (suficientes para nuestro subconjunto seguro).
 RE_NODE = re.compile(
@@ -59,10 +83,90 @@ def _clean_label(raw: str) -> str:
     return s
 
 
+def _validate_er(body: List[str], warnings: List[str]) -> None:
+    """
+    Valida un erDiagram (Tipo B): relaciones con notación canónica y bloques
+    de atributos `ENTIDAD { ... }` bien emparejados. Sin tope de nodos
+    (mermaid-rules.md: el particionamiento del modelo de datos es una regla
+    de legibilidad para el agente, no un techo duro del validador).
+    Lanza ValueError si algo no es válido.
+    """
+    in_block = False
+    entities: set = set()
+    for ln in body:
+        s = ln.strip()
+        if not s or s.startswith("%%"):
+            continue
+        if in_block:
+            if s == "}":
+                in_block = False
+            elif s.endswith("{"):
+                raise ValueError("erDiagram: bloque de atributos anidado no permitido.")
+            # Línea de atributo (`tipo nombre [PK|FK] ...`): se acepta.
+            continue
+        m_open = RE_ER_BLOCK_OPEN.match(s)
+        if m_open:
+            entities.add(m_open.group("name"))
+            in_block = True
+            continue
+        if s == "}":
+            raise ValueError("erDiagram: '}' sin bloque de atributos abierto.")
+        m_rel = RE_ER_REL.match(s)
+        if m_rel:
+            entities.add(m_rel.group("left"))
+            entities.add(m_rel.group("right"))
+            label = m_rel.group("label")
+            if label is not None and not (label.startswith('"') and label.endswith('"')):
+                warnings.append(
+                    f"erDiagram: etiqueta de relación sin comillas dobles: {label!r} "
+                    "(recomendado: \"...\")."
+                )
+            continue
+        if RE_ER_ENTITY.match(s):
+            entities.add(s)  # entidad declarada sin atributos ni relación
+            continue
+        if "--" in s:
+            raise ValueError(
+                f"erDiagram: relación con notación no canónica: '{s}'. "
+                "Permitidas: ||--||, ||--o{, }o--||, }o--o{."
+            )
+        raise ValueError(f"erDiagram: línea no reconocida: '{s}'.")
+    if in_block:
+        raise ValueError("erDiagram: bloque de atributos sin cerrar ('}').")
+    if not entities:
+        raise ValueError("erDiagram sin entidades.")
+
+
+def _validate_subgraph_lanes(body: List[str], warnings: List[str]) -> None:
+    """
+    Valida la estructura de lanes de un flowchart Tipo C: cada `subgraph`
+    debe cerrarse con su `end` (aperturas/cierres emparejados).
+    Lanza ValueError si están desemparejados.
+    """
+    depth = 0
+    for ln in body:
+        s = ln.strip()
+        if RE_SUBGRAPH_OPEN.match(s):
+            depth += 1
+            continue
+        if s == "end":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("Tipo C: 'end' sin 'subgraph' abierto.")
+    if depth != 0:
+        raise ValueError(
+            f"Tipo C: {depth} subgraph(s) sin cerrar con 'end' (lanes desemparejados)."
+        )
+
+
 def sanitize(diagram_text: str) -> Tuple[str, List[str]]:
     """
     Devuelve (diagrama_saneado, lista_de_avisos).
     Lanza ValueError si el diagrama no puede sanearse.
+
+    Dispatch por cabecera: erDiagram → Tipo B (pass-through validado);
+    flowchart con subgraph → Tipo C (pass-through validado);
+    flowchart sin subgraph → Tipo A (saneado histórico completo).
     """
     warnings: List[str] = []
     lines = [ln.rstrip() for ln in diagram_text.strip().splitlines() if ln.strip()]
@@ -70,6 +174,12 @@ def sanitize(diagram_text: str) -> Tuple[str, List[str]]:
         raise ValueError("Diagrama vacío.")
 
     header = lines[0].strip()
+
+    # --- Tipo B: erDiagram (modelo de datos) — sin tope de nodos. ---
+    if header.split("%%", 1)[0].strip() == "erDiagram":
+        _validate_er(lines[1:], warnings)
+        return diagram_text.strip() + "\n", warnings
+
     if header not in ALLOWED_HEADERS:
         # Intenta corregir flowchart sin dirección o con dirección distinta.
         if header.startswith("flowchart"):
@@ -84,6 +194,14 @@ def sanitize(diagram_text: str) -> Tuple[str, List[str]]:
             )
     body = lines[1:]
 
+    # --- Tipo C: flowchart con lanes (subgraph ... end). ---
+    # Se valida la estructura y se deja pasar tal cual: los shapes BPMN-styled
+    # ((( ))), :::clase, emojis y classDef no entran en el subconjunto del Tipo A.
+    if any(RE_SUBGRAPH_OPEN.match(ln) for ln in body):
+        _validate_subgraph_lanes(body, warnings)
+        return "\n".join([header] + body) + "\n", warnings
+
+    # --- Tipo A: saneado histórico (sin cambios). ---
     # Detección de sintaxis prohibida.
     for ln in body:
         if re.search(r"\bsubgraph\b", ln):
@@ -198,6 +316,15 @@ def extract_mermaid_blocks(md_text: str) -> List[str]:
 
 
 def main() -> int:
+    # En Windows la consola puede ser cp1252: los diagramas Tipo C llevan
+    # emojis (iconos BPMN) y romperían al imprimirse. Forzamos UTF-8.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
     parser = argparse.ArgumentParser(description="Valida y sanea diagramas Mermaid.")
     parser.add_argument("source", help="Fichero a procesar, '-' para stdin.")
     parser.add_argument(
