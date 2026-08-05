@@ -276,6 +276,7 @@ Carga estos archivos cuando los necesites — **no todos a la vez**. Sigue progr
 | `scripts/render_diagrams.sh` | Fase 5. Renderiza `.mmd` → `.svg` con `mmdc`. |
 | `scripts/validate_mermaid.py` | Después de cada bloque Mermaid, antes de escribirlo. Soporta tipos A (flowchart), B (`erDiagram`) y C (lanes con `subgraph`). |
 | `scripts/check_coverage.py` | **Validación final, siempre.** Gate de cobertura por tipo de objeto. Exit 1 = faltan objetos por documentar. |
+| `scripts/check_spec_layout.py` | **Validación final, siempre.** Gate de estructura: layout, enlaces/anclas rotos, secciones de plantilla, placeholders. Exit 1 = documentos mal formados. |
 
 ---
 
@@ -352,6 +353,14 @@ python scripts/check_coverage.py {ruta}/_doc_generada --mode {onboarding|rebuild
 ```
 
 Debe salir **0**. Si sale 1, imprime los objetos que faltan: documéntalos y vuelve a ejecutarlo. **Adjunta la tabla de cobertura en la respuesta final.** En modo `rebuild`, un objeto solo puede quedar fuera si aparece en `10-especificacion/trazabilidad.md` como `DESCARTADO: {motivo}`.
+
+**0-bis. Gate de estructura — también obligatorio:**
+
+```bash
+python scripts/check_spec_layout.py {ruta}/_doc_generada --mode {onboarding|rebuild}
+```
+
+Comprueba lo que la cobertura no ve: layout de `10-especificacion/`, enlaces y anclas rotos, secciones obligatorias de cada ficha de pantalla, criterios de reconstrucción verificables y placeholders sin rellenar. Debe salir **0**.
 
 1. Existen los 11 ficheros en `{ruta}/_doc_generada/` (+ `10-especificacion/` si `profundidad: rebuild`).
 2. `08-procesos-bpmn/` tiene un `.bpmn`/`.mmd`/`.md` por process model + `indice.md` los lista todos.
