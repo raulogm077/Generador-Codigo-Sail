@@ -17,7 +17,7 @@ Lees los datos ya estructurados en `detail.json` y `graph.json` — no re-parsea
 
 ## Entradas
 
-- `<ruta_salida>/_intermedio/detail.json` — extracción estructurada (`parse_export.py --detail`): por regla `ruleInputs`, `referencedRules`, `sail` (ya enmascarado); por decision `inputs`, `outputs`, `rows`; por constant `value`; por RT/CDT `fields`; por PM `processVariables` y `nodes` (con `expressionSummary`, `assignees`, `form`).
+- `<ruta_salida>/_intermedio/detail.json` — extracción estructurada (`parse_export.py --detail`): por regla `ruleInputs`, `referencedRules` / `referencedInterfaces` / `referencedDecisions` / `referencedUnresolved` (desambiguadas por tipo), `sail` (ya enmascarado); por decision `inputs`, `outputs`, `rows`; por constant `value`; por RT/CDT `fields`; por PM `processVariables` y `nodes` (con `expressionSummary`, `assignees`, `form`).
 - `<ruta_salida>/_intermedio/graph.json` — aristas para calcular callers, `orphans`.
 - `<ruta_salida>/_intermedio/inventory.json` — conteos para el checklist de cobertura.
 - `<ruta_export>/` — export original (read-only), solo como fallback si a `detail.json` le falta el SAIL de algún objeto (objeto corrupto, formato antiguo). Si tampoco ahí es legible → ficha con `NO ANALIZADO: {qué y por qué}`.

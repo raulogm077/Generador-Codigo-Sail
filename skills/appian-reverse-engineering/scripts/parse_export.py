@@ -673,19 +673,50 @@ def _rule_inputs_of(inner: ET.Element) -> list[dict[str, Any]]:
     return out
 
 
-def _sail_references(sail: str, own_name: str | None, uuid_to_name: dict[str, str]) -> tuple[list[str], list[str]]:
-    rules: list[str] = []
+def _sail_references(
+    sail: str,
+    own_name: str | None,
+    uuid_to_name: dict[str, str],
+    type_by_name: dict[str, str] | None = None,
+) -> dict[str, list[str]]:
+    """Extrae las referencias salientes de una expresion SAIL, POR TIPO.
+
+    En Appian el prefijo `rule!` sirve para expression rules, interfaces Y
+    decisions. Devolver todo en una sola lista `referencedRules` hacia que el
+    agente enlazara interfaces al catalogo de reglas (enlace muerto), asi que
+    se desambigua contra el inventario con la MISMA precedencia que cmd_graph:
+    expressionRule -> interface -> decision.
+
+    `referencedUnresolved` es obligatorio: un `rule!X` que no esta en el
+    inventario es una dependencia no exportada (riesgo real). Sin ese bucket
+    desapareceria en silencio al filtrar.
+    """
+    type_by_name = type_by_name or {}
+    buckets: dict[str, list[str]] = {
+        "referencedRules": [],
+        "referencedInterfaces": [],
+        "referencedDecisions": [],
+        "referencedUnresolved": [],
+        "referencedRecordTypes": [],
+    }
+    bucket_of = {
+        "expressionRule": "referencedRules",
+        "interface": "referencedInterfaces",
+        "decision": "referencedDecisions",
+    }
     for m in REF_PATTERNS["expressionRule"].finditer(sail):
         nm = m.group(1)
-        if nm != own_name and nm not in rules:
-            rules.append(nm)
-    rts: list[str] = []
+        if nm == own_name:
+            continue
+        key = bucket_of.get(type_by_name.get(nm, ""), "referencedUnresolved")
+        if nm not in buckets[key]:
+            buckets[key].append(nm)
     for pat in (RT_FIELD_UUID_RE, REF_PATTERNS["uuidRecordType"]):
         for m in pat.finditer(sail):
             nm = uuid_to_name.get(m.group(1), m.group(1))
-            if nm not in rts:
-                rts.append(nm)
-    return rules, rts
+            if nm not in buckets["referencedRecordTypes"]:
+                buckets["referencedRecordTypes"].append(nm)
+    return buckets
 
 
 def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
@@ -697,6 +728,15 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
         for o in objs
         if isinstance(o, dict) and o.get("uuid") and o.get("name")
     }
+    # Precedencia identica a cmd_graph para resolver `rule!X`: una interfaz y
+    # una expression rule pueden llamarse igual, y el grafo y el detalle no
+    # deben discrepar nunca.
+    type_by_name: dict[str, str] = {}
+    for obj_type in ("decision", "interface", "expressionRule"):
+        for o in objects.get(obj_type, []):
+            if isinstance(o, dict) and o.get("name"):
+                type_by_name[o["name"]] = obj_type
+
     detail: dict[str, dict[str, Any]] = {
         "recordTypes": {},
         "interfaces": {},
@@ -705,6 +745,7 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
         "decisions": {},
         "constants": {},
         "dataStores": {},
+        "sites": {},
         "cdts": {},
     }
 
@@ -743,13 +784,12 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             if inner is None:
                 continue
             sail = mask_sail(_sail_of(inner))
-            rules, rts = _sail_references(sail, o.get("name"), uuid_to_name)
+            refs = _sail_references(sail, o.get("name"), uuid_to_name, type_by_name)
             detail[section][o["name"]] = {
                 "uuid": o.get("uuid"),
                 "path": o["path"],
                 "ruleInputs": _rule_inputs_of(inner),
-                "referencedRules": rules,
-                "referencedRecordTypes": rts,
+                **refs,
                 "sail": sail,
             }
 
@@ -838,6 +878,36 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             if strip_ns(el.tag) == "entity"
         ]
         detail["dataStores"][o["name"]] = {"uuid": o.get("uuid"), "path": o["path"], "entities": entities}
+
+    # Sites: paginas con su objeto destino. Sin esto, la ficha de navegacion
+    # del nivel 3 no tendria datos y el agente se inventaria las paginas.
+    for o in objects.get("site", []):
+        inner = _haul_inner(Path(o["path"]))
+        if inner is None:
+            continue
+        pages: list[dict[str, Any]] = []
+        for el in inner.iter():
+            if strip_ns(el.tag) not in ("page", "sitePage"):
+                continue
+            target_uuid = (
+                get_attr_any(el, "objectUuid", "uuid", "targetUuid")
+                or find_first_text(el, "objectUuid", "targetUuid", "uuid", max_depth=3)
+            )
+            pages.append({
+                "name": get_attr_any(el, "name") or find_first_text(el, "name", max_depth=2),
+                "type": get_attr_any(el, "type", "pageType")
+                or find_first_text(el, "type", "pageType", max_depth=2),
+                "target": uuid_to_name.get(target_uuid or "", target_uuid),
+                "urlStub": get_attr_any(el, "urlStub") or find_first_text(el, "urlStub", max_depth=2),
+            })
+        detail["sites"][o["name"]] = {
+            "uuid": o.get("uuid"),
+            "path": o["path"],
+            "pages": pages,
+            "groups": [
+                g for g in (find_first_text(inner, "visibilityGroup", "group"),) if g
+            ],
+        }
 
     for o in objects.get("cdt", []):
         xsd_root = safe_parse(Path(o["path"]))

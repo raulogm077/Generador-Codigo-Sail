@@ -45,7 +45,8 @@
 
 ## Reglas invocadas
 
-| rule! | Para qué | → ficha en reglas-catalogo |
+| Referencia | Tipo | Para qué | → ficha (según tipo) |
+| `rule!{{x}}` | expression rule \| decision \| **interfaz** \| no resuelta | | `../reglas-catalogo.md#…` · `./{{interfaz}}.md` · 🔴 fuera del export |
 |---|---|---|
 | `rule!{{DEMO_VAL_Ejemplo}}` | {{qué aporta a esta pantalla}} | [reglas-catalogo.md](../reglas-catalogo.md#rule{{nombre_anchor}}) |
 

@@ -14,7 +14,7 @@ Tu prioridad es **exhaustividad verificable** (cobertura 100% de interfaces y de
 
 ## Entradas
 
-- `<ruta_salida>/_intermedio/detail.json` — producido por `scripts/parse_export.py --detail` en Fase 4.5. Por interfaz: `ruleInputs` (nombre, tipo, required), `referencedRules`, `referencedRecordTypes`, `sail` (contenido completo, ya enmascarado), `path` (XML de origen), `uuid`.
+- `<ruta_salida>/_intermedio/detail.json` — producido por `scripts/parse_export.py --detail` en Fase 4.5. Por interfaz: `ruleInputs` (nombre, tipo, required), `referencedRules` / `referencedInterfaces` / `referencedDecisions` / `referencedUnresolved` (las referencias `rule!` ya vienen **desambiguadas por tipo**), `referencedRecordTypes`, `sail` (contenido completo, ya enmascarado), `path` (XML de origen), `uuid`. Tambien `sites` (paginas con su objeto destino), que necesitas para la ficha de navegacion.
 - `<ruta_salida>/_intermedio/graph.json` — aristas entrantes = callers de cada interfaz; `orphans`.
 - `<ruta_salida>/_intermedio/inventory.json` — lista canónica de interfaces (tu denominador de cobertura).
 - `assets/markdown-templates/10-especificacion/pantalla-template.md` — plantilla obligatoria de cada ficha.
@@ -57,7 +57,7 @@ Recorre el `sail` de `detail.json` en **orden de aparición** (profundidad prime
 - Por cada fila: etiqueta, campo/dato origen (`ri!`/`local!`/`fv!`/recordType), obligatorio, **validaciones con el predicado EXACTO**, **visible/editable cuando con el predicado EXACTO** (o `siempre`), y `saveInto → efecto`.
 - Campos con `showWhen: false` fijo o `readOnly: true` también se documentan (son decisiones de diseño reconstruibles).
 
-Documenta igualmente: **Entradas** (todos los `ruleInputs`, con quién pasa el valor si se conoce por los callers), **Variables locales** (todas las `local!` declaradas: expresión inicial y para qué sirve; las puramente presentacionales pueden agruparse en una fila), **Reglas invocadas** (cada `referencedRules` con su propósito en esta pantalla y enlace a `../reglas-catalogo.md`), y **Estados de la pantalla** (si algún predicado depende del estado del registro — campo `estado`/`status` o dominio de una constant — tabla estado → qué se ve; si no, `N/A — la pantalla no varía según estado del registro`).
+Documenta igualmente: **Entradas** (todos los `ruleInputs`, con quién pasa el valor si se conoce por los callers), **Variables locales** (todas las `local!` declaradas: expresión inicial y para qué sirve; las puramente presentacionales pueden agruparse en una fila), **Reglas invocadas** — cada referencia con su propósito en esta pantalla y **el enlace que corresponde a su tipo**: `referencedRules` y `referencedDecisions` → `../reglas-catalogo.md#…`; `referencedInterfaces` → la ficha hermana `./{interfaz}.md` (en Appian una interfaz también se invoca con `rule!`, pero nunca tendrá ficha en el catálogo de reglas); `referencedUnresolved` → márcala 🔴 «dependencia no incluida en el export», sin enlace, y **Estados de la pantalla** (si algún predicado depende del estado del registro — campo `estado`/`status` o dominio de una constant — tabla estado → qué se ve; si no, `N/A — la pantalla no varía según estado del registro`).
 
 ### Paso 4 — Interfaces grandes (>100KB de SAIL)
 

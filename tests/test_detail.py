@@ -44,6 +44,37 @@ class TestDetail(unittest.TestCase):
         self.assertIn("importe", [ri["name"] for ri in ifc["ruleInputs"]])
         self.assertIn("DEMO_VAL_ValidarImporte", ifc["referencedRules"])
 
+    # --- M4: referencias desambiguadas por tipo ---
+
+    def test_referenced_rules_excluye_interfaces(self):
+        """En Appian una interfaz se invoca con `rule!`, pero NO es una regla:
+        colarla en referencedRules generaba enlaces muertos al catalogo."""
+        ifc = self.detail["interfaces"]["DEMO_IFC_SolicitudForm"]
+        self.assertNotIn("DEMO_IFC_SolicitudList", ifc["referencedRules"])
+
+    def test_referenced_interfaces_capturadas(self):
+        ifc = self.detail["interfaces"]["DEMO_IFC_SolicitudForm"]
+        self.assertIn("DEMO_IFC_SolicitudList", ifc["referencedInterfaces"])
+
+    def test_buckets_de_referencias_existen_siempre(self):
+        """Las 4 claves deben estar aunque esten vacias: un consumidor que haga
+        entry["referencedDecisions"] no puede reventar con KeyError."""
+        for section in ("interfaces", "expressionRules"):
+            for name, entry in self.detail[section].items():
+                for key in (
+                    "referencedRules",
+                    "referencedInterfaces",
+                    "referencedDecisions",
+                    "referencedUnresolved",
+                    "referencedRecordTypes",
+                ):
+                    self.assertIn(key, entry, f"{section}.{name} sin {key}")
+                    self.assertIsInstance(entry[key], list)
+
+    def test_seccion_sites_existe(self):
+        self.assertIn("sites", self.detail)
+        self.assertIsInstance(self.detail["sites"], dict)
+
     def test_pm_process_variables(self):
         pm = self.detail["processModels"]["DEMO_PM_AprobarSolicitud"]
         self.assertTrue(any(pv["name"] == "solicitud" for pv in pm["processVariables"]))
