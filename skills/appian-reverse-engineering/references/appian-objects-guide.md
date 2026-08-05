@@ -9,7 +9,7 @@ Un export Appian descomprimido suele tener:
 - Una carpeta raíz con nombre tipo `<NombreApp>_App.zip` (descomprimida o no).
 - Dentro, una estructura por tipo de objeto o un único `application.xml` con todos los objetos referenciados por UUID.
 - `import-customization-file*.properties` (ICF) — valores por entorno.
-- A veces XSDs en `cdt/`, XMLs de procesos en `process-model/`, etc.
+- Formato *Haul* actual: carpetas en **camelCase** — `processModel/`, `recordType/`, `site/`, `content/`, `group/`, `connectedSystem/`, `datatype/` (XSDs de CDTs), `dataStore/`, `application/`. Los exports antiguos usaban guiones (`process-model/`, `record-type/`, `cdt/`); ambos se reconocen con `scripts/parse_export.py --check`.
 
 Si solo tienes un `.zip`, descomprime antes de analizar:
 

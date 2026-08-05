@@ -45,7 +45,7 @@ flowchart LR
 
 > Una fila por process model. Click en "📐 BPMN" para abrir el `.bpmn` en una herramienta profesional; click en "📄 .md" para ver la ficha con la vista preliminar.
 
-| Process Model | Trigger | Lanes | Pools externos | Críticos | Subprocesos | Integraciones | Fuente | Ficha |
+| Process Model | Trigger | Lanes | Pools externos | Críticos | Subprocesos | Integraciones | Data Stores | Padre (quién lo invoca) | Fuente | Ficha |
 |---|---|---|---|---|---|---|---|---|
 | `{{pm_1}}` | manual | 2 (Operator, Approver) | 1 (SAP) | 🔴 | `{{PM_hijo_1}}` | `{{int_1}}` | [📐 BPMN](./{{pm_1}}.bpmn) | [📄 .md](./{{pm_1}}.md) |
 | `{{pm_2}}` | timer (cada lunes) | 0 | 0 | 🟡 | `{{PM_hijo_X}}` | `{{int_2}}` | [📐 BPMN](./{{pm_2}}.bpmn) | [📄 .md](./{{pm_2}}.md) |

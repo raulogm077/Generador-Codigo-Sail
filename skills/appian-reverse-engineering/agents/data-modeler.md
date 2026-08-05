@@ -25,7 +25,8 @@ Lees los XSDs de CDTs y los XMLs de Record Types del export Appian. Tu salida es
 
 Lee `_intermedio/inventory.json` y extrae:
 - Todos los Record Types con sus campos: nombre técnico, nombre visible, UUID, source type, CDT asociado, tabla BBDD, ruta del XML.
-- Todos los CDTs con sus XSDs: namespace, campos con tipo, anotaciones JPA (`@Table`, `@Column`, `@OneToMany`, `@ManyToOne`).
+- Todos los CDTs con sus XSDs: namespace, campos con tipo, anotaciones JPA (`@Table`, `@Column`, `@OneToMany`, `@ManyToOne`), y dónde se usa cada uno (records / process variables / interfaces).
+- Por cada Record Type, además de los campos: **fuente** (`<source>`: DB / servicio / proceso / expresión), CDT asociado, **record views** con los campos que muestran, **related actions** con su **process model destino**, y filtros por defecto.
 - Todos los Data Stores con su JNDI y entidades configuradas.
 
 Si falta cualquier dato, **no inventes**: marca `⚠️ no determinado en el export — pendiente de validación con DBA/funcional`.

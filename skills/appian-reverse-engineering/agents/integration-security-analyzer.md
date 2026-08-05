@@ -32,6 +32,7 @@ Para cada CS del inventario:
 - Nombre técnico, nombre visible, tipo (`HTTP`, `OAUTH2_*`, `SALESFORCE`, `SAP`, `JDBC`, plugin custom).
 - Base URL — **enmascarada** si lleva credenciales embebidas (`https://user:pass@host` → `https://user:***@host`).
 - Auth type.
+- **Autenticación**: tipo (Basic / OAuth client credentials / API key header / token por constant) con los valores enmascarados. Si la auth viene del ICF y el ICF está vacío, anótala como `⚠️ no determinado` — no la infieras.
 - Credenciales/secretos: **NUNCA volcar valores**. Documentar como "🔒 Enmascarado (referenciado por `cons!CON_API_TOKEN`)" o "🔒 Referenciado desde ICF: clave `connectedSystem.<uuid>.password`". Marca como 🔴 si está hardcodeado.
 - Propósito inferido (qué sistema externo es y qué se intercambia con él).
 - Integraciones que lo usan.

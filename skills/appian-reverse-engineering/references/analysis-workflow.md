@@ -11,14 +11,19 @@ Detalle operativo de las fases que orquesta `SKILL.md`, con checklists, patrones
 | **2 — Inventariar** | `INVENTARIO.md` + `_intermedio/inventory.json` + barrido de secretos. | Orquestador |
 | **3 — Grafo** | `_intermedio/graph.json`. | Orquestador |
 | **4 — Entregables 01→09** | 4.1 `interface-analyzer` (va primero); 4.2 `data-modeler` + `integration-security-analyzer` + `process-modeler` **en paralelo**; 4.3 el orquestador escribe `07-batches.md` y `09-valor-adicional.md`. | Subagentes de `agents/` |
-| **4.5 — Especificación (solo `profundidad: rebuild`)** | `parse_export.py --detail` → `_intermedio/detail.json`; luego `interface-spec-writer` + `logic-spec-writer` en paralelo y, al terminar ambos, `backlog-writer`. Produce `10-especificacion/`. | Subagentes |
+| **4.5 — Especificación (solo `profundidad: rebuild`)** | `parse_export.py --detail` → `_intermedio/detail.json`; luego `interface-spec-writer` + `logic-spec-writer` + `process-modeler` (2ª invocación) en paralelo y, al terminar, `backlog-writer`. Produce `10-especificacion/`. | Subagentes |
 | **5 — Renderizar diagramas** | Mermaid → SVG con refinamiento iterativo. | Orquestador |
 | **6 — Resumen ejecutivo** | `00-resumen-ejecutivo.md` (al final: depende del resto). | Orquestador |
 | **6.5 — summary.json** | `build_summary.py` (siempre; lo consumen los publishers). | Orquestador |
 | **7 — Publicación opcional** | `pdf-publisher` y/o `dashboard-publisher` según preferencias. | Subagentes |
 | **8 — Respuesta final** | Plantilla literal de `response-format.md` + tabla de cobertura. | Orquestador |
 
-**Cierre obligatorio de cualquier ejecución**: `python scripts/check_coverage.py <salida> --mode {onboarding\|rebuild}` debe salir 0. Si sale 1, documenta los objetos que faltan antes de cerrar.
+**Cierre obligatorio de cualquier ejecución** — los dos gates deben salir 0:
+
+```bash
+python scripts/check_coverage.py    <salida> --mode {onboarding|rebuild}   # ¿está todo documentado?
+python scripts/check_spec_layout.py <salida> --mode {onboarding|rebuild}   # ¿está bien formado?
+```
 
 ## Convenciones de toda la salida
 
@@ -26,7 +31,13 @@ Detalle operativo de las fases que orquesta `SKILL.md`, con checklists, patrones
 - **Estados**: ✅ Confirmado · 🔵 Inferido · 🟡 Pendiente · 🔴 Riesgo.
 - **Nivel de confianza**: Alta / Media / Baja.
 - **Carpeta de salida**: `<ruta_export>/_doc_generada/`.
-- **Ficheros intermedios** (nombres exactos, en inglés): `inventory.json`, `graph.json`, `detail.json`, `coverage.json`, `summary.json`, `output_preferences.json`.
+- **Ficheros intermedios** (nombres exactos, en inglés): `inventory.json`, `graph.json`, `detail.json`, `coverage.json`, `summary.json`, `output_preferences.json`, `secretos.md`, `render_pendiente.txt`.
+
+---
+
+## FASE 0 — Elicitación
+
+Antes de generar nada: preguntar formatos de salida y, si el objetivo huele a reconstrucción/migración, la **profundidad**. Guiones literales y reglas duras en `SKILL.md` § Fase 0. Sin respuesta explícita → solo Markdown y `profundidad: onboarding`. La elección se guarda en `_intermedio/output_preferences.json`.
 
 ---
 
@@ -34,30 +45,21 @@ Detalle operativo de las fases que orquesta `SKILL.md`, con checklists, patrones
 
 **Objetivo:** evitar empezar a documentar carpetas que no lo son.
 
-### Acciones
-
-1. Verifica presencia de **al menos uno** de estos indicadores:
-   - `application.xml` en la raíz o un nivel debajo.
-   - Carpetas `process-model/`, `record-type/`, `cdt/`, `interface/`, `expression-rule/`, `integration/`, `web-api/`, `group/`, `connected-system/`, `data-store/`, `constant/`, `site/`, `decision/`.
-   - Archivos con extensión `.bpmn` o XSDs en `cdt/`.
-   - `import-customization-file*.properties` (ICF).
+1. **Método canónico**: `python scripts/parse_export.py --check <ruta>`. Reconoce el formato *Haul* real (carpetas en camelCase: `processModel/`, `recordType/`, `site/`, `content/`, `group/`, `connectedSystem/`, `datatype/`, `dataStore/`, `application/`) y el formato antiguo (`application.xml` en la raíz). También cuenta XSDs de CDTs e ICFs.
 2. Si la entrada es un `.zip`, descomprime antes:
    ```bash
    command -v unzip >/dev/null && unzip -q -d <destino> <export>.zip
    ```
    Si `unzip` no está disponible, pide al usuario que lo descomprima manualmente.
-3. Si **ninguno** de los indicadores aparece, **detén el flujo** y devuelve al usuario:
-   > "La ruta `<ruta>` no parece un export Appian. No he encontrado `application.xml` ni carpetas típicas (`process-model/`, `record-type/`, `cdt/`…). ¿Puedes confirmar que es la carpeta correcta o pasarme una ruta distinta?"
-4. Si la validación pasa, crea la carpeta de salida:
+3. Si `--check` no reconoce nada, **detén el flujo** y devuelve al usuario:
+   > "La ruta `<ruta>` no parece un export Appian. No he encontrado `application.xml` ni las carpetas típicas (`processModel/`, `recordType/`, `content/`…). ¿Puedes confirmar que es la carpeta correcta o pasarme una ruta distinta?"
+4. Si la validación pasa, crea la estructura de salida:
    ```bash
    mkdir -p <ruta>/_doc_generada/diagrams
    mkdir -p <ruta>/_doc_generada/08-procesos-bpmn
    ```
 
-### Salida
-
-- Carpeta `_doc_generada/` lista para llenar.
-- Variable interna: versión de Appian detectada de `application.xml` (atributo `@version` si aparece). Si no aparece, queda en `⚠️ no determinado`.
+**Salida**: carpeta `_doc_generada/` lista, y la versión de Appian detectada de `application.xml` (atributo `@version` si aparece; si no, `⚠️ no determinado`).
 
 ---
 
@@ -65,39 +67,14 @@ Detalle operativo de las fases que orquesta `SKILL.md`, con checklists, patrones
 
 **Objetivo:** entender qué hay en el export antes de interpretar nada.
 
-### Acciones
+1. **Barrido bruto** con `scripts/inventory.sh <ruta>` (primer mapa de extensiones y carpetas; las cantidades son aproximadas).
+2. **Inventariado estructurado**: `scripts/parse_export.py --inventory <ruta> --out <ruta>/_doc_generada/_intermedio/inventory.json`. Por objeto: `name` (técnico), `displayName` (visible), `uuid`, `path`, `description`, `updatedOn`/`updatedBy` si están, más metadatos por tipo (startType de PMs, method/endpoint de integraciones, fieldCount de records…).
+3. **Barrido de secretos**: `bash scripts/detect_secrets.sh <ruta>` → guarda salida en `_intermedio/secretos.md`, que alimenta la sección de riesgos de `09-valor-adicional.md`.
+4. **Detección de ICF**: lista todos los `import-customization-file*.properties` y guarda sus rutas.
+5. **Detección de paquetes / módulos** por prefijo de naming dominante (`APP_Cliente_*`, `MOD_Pedido_*`). Esos prefijos suelen revelar los módulos lógicos de la app.
+6. Cómo reconocer cada tipo de objeto en su XML: `references/appian-objects-guide.md`.
 
-1. **Barrido bruto** con `scripts/inventory.sh <ruta>` para obtener un primer mapa de extensiones y carpetas.
-2. **Detección de objetos por contenido** — patrones de identificación en `references/appian-objects-guide.md` (tabla "Reconocimiento por XML"). Recorre TODOS los XML del export.
-3. **Inventariado estructurado** con `scripts/parse_export.py --inventory <ruta> --out <ruta>/_doc_generada/_intermedio/inventory.json`. Produce JSON con, por tipo de objeto:
-   - `name` (técnico)
-   - `displayName` (visible)
-   - `uuid` (si está)
-   - `path` (relativo al export)
-   - `description` (si está)
-   - `updatedOn` / `updatedBy` (si están)
-4. **Barrido de secretos** con `bash scripts/detect_secrets.sh <ruta>` — guarda salida en `_doc_generada/_intermedio/secretos.md` para alimentar Fase 4 (sección de seguridad y riesgos en `09-valor-adicional.md`).
-5. **Detección de ICF**: lista todos los `import-customization-file*.properties` y guarda paths.
-6. **Detección de paquetes / módulos** por prefijo de naming dominante. Ejemplos: `APP_Cliente_*`, `MOD_Pedido_*`. Estos prefijos suelen revelar módulos lógicos.
-
-### Salida — `INVENTARIO.md`
-
-Tabla por categoría, en este orden (omite las categorías con cero objetos):
-
-```markdown
-## Records
-| Nombre técnico | Nombre visible | Ruta | UUID | Descripción | Actualizado | Confianza |
-|---|---|---|---|---|---|---|
-
-## CDTs
-| Namespace | Nombre | Ruta XSD | Mapeo JPA | Campos | Confianza |
-
-## Process Models
-| Nombre técnico | Nombre visible | Ruta | UUID | Trigger | Confianza |
-
-## Interfaces · Expression Rules · Decisions · Integrations · Connected Systems · Web APIs · Groups · Sites · Constants · Data Stores · Documents · Folders · Plugins
-... (misma estructura)
-```
+**Salida — `INVENTARIO.md`**: tabla por categoría (omite las categorías vacías) siguiendo `assets/markdown-templates/INVENTARIO.md`, que incluye además el conteo por tipo y el cruce de consistencia con `application.xml`.
 
 **Regla:** el inventario es punto de partida, no resultado. No te quedes aquí.
 
@@ -105,176 +82,69 @@ Tabla por categoría, en este orden (omite las categorías con cero objetos):
 
 ## FASE 3 — Construir el grafo de dependencias
 
-**Objetivo:** generar el grafo `objeto → objeto` que alimenta todas las fases siguientes.
+**Objetivo:** generar el grafo `objeto → objeto` que alimenta todas las fases siguientes. Lo produce `scripts/parse_export.py --graph`.
 
-### Acciones
+**Patrones de referencia** que se extraen de cada XML y de las expresiones SAIL embebidas:
 
-1. **Extraer referencias salientes** de cada objeto recorriendo su XML y las expresiones SAIL embebidas. Patrones a buscar en cada fichero:
+| Patrón | Significa |
+|---|---|
+| `rule!<nombre>(` | Llama a expression rule, **interfaz o decision** (se desambigua contra el inventario) |
+| `cons!<nombre>` | Usa constant |
+| `recordType!<nombre>` / urn de record type | Usa record type |
+| `a!startProcess(processModel: ` | Lanza process model |
+| `<processModelUuid>` dentro de otro PM | Subproceso |
+| `<connectedSystemRef>…</connectedSystemRef>` | Integration → Connected System |
+| `a!queryEntity(entity: cons!<DS>)` | Query a data store |
+| `a!queryRecordType(recordType: recordType!<RT>)` | Query a record |
+| `a!writeToDataStoreEntity` / `a!writeRecords` | Escritura |
+| `a!integrationCall(integration: ` | Llamada a integration |
+| `a!isUserMemberOfGroup(…)` | Check de seguridad |
 
-   | Patrón | Significa |
-   |---|---|
-   | `rule!<nombre>(` | Llama a expression rule |
-   | `cons!<nombre>` | Usa constant |
-   | `recordType!<nombre>` | Usa record type |
-   | `a!startProcess(processModel: ` | Lanza process model |
-   | `<processModel uuid="..."/>` dentro de otro PM | Subproceso |
-   | `<connectedSystemRef>...</connectedSystemRef>` | Integration → Connected System |
-   | `<dataStore>` referenciado | Process / record → Data Store |
-   | `a!queryEntity(entity: cons!<DS>)` | Query a data store |
-   | `a!queryRecordType(recordType: recordType!<RT>)` | Query a record |
-   | `a!writeToDataStoreEntity` / `a!writeRecords` | Escritura |
-   | `a!integrationCall(integration: ` | Llamada a integration |
-   | `a!isUserMemberOfGroup(group: cons!<GROUP>)` | Check de seguridad |
+Los tags XML se reconocen **con o sin prefijo de namespace** (`<a:processModelUuid>` también casa).
 
-2. **Resolver referencias** contra el inventario:
-   - Referenciado y existe → arista normal.
-   - Referenciado pero NO existe en el inventario → arista a "externa" + marcar 🔴 (dependencia faltante en el export).
-   - En el inventario pero NO referenciado por nadie → candidato a **huérfano**, marcar 🟡 para Fase 4 (`09-valor-adicional.md`).
+**Resolución de referencias** contra el inventario:
+- Referenciado y existe → arista normal.
+- Referenciado pero NO existe → dependencia faltante en el export, marcar 🔴.
+- En el inventario pero NO referenciado por nadie → candidato a **huérfano**, marcar 🟡 para `09-valor-adicional.md`.
 
-3. **Salida intermedia**: `_doc_generada/_intermedio/graph.json` con `nodes` (objetos) y `edges` (`{from, to, type, evidence}`). Lo produce `scripts/parse_export.py --graph`.
+**Detección automática**:
+- **Subprocesos vs procesos raíz**: un PM es raíz si no es `target` de ninguna arista `startProcess` ni subproceso de otro PM.
+- **Batches**: PM con start event `<recurrence>` o `<timerEvent>`.
+- **Objetos huérfanos**: nodos sin aristas entrantes, excepto puntos de entrada conocidos (sites, web APIs, batches, application).
+- **Acoplamientos fuertes**: nodos con grado entrante o saliente >10.
+- **Ciclos**: ciclos en el grafo de invocación entre process models.
 
-4. **Detección automática de**:
-   - **Subprocesos vs procesos raíz**: un PM es raíz si no aparece como `target` de ninguna arista `a!startProcess` y no es subprocess de otro PM.
-   - **Process models que son batches**: PM con start event `<recurrence>` o `<timerEvent>`.
-   - **Objetos huérfanos**: nodos sin aristas entrantes (excepto puntos de entrada conocidos: Sites, Web APIs, batches).
-   - **Acoplamientos fuertes**: nodos con grado entrante o saliente >10.
-   - **Ciclos**: ciclos en el grafo de invocación entre process models.
-
-### Salida
-
-- `_intermedio/graph.json` (consumido por las fases siguientes; no es entregable final).
-- Lista de candidatos a huérfanos.
-- Lista de acoplamientos fuertes y ciclos detectados.
+**Cómo leer la salida**: `orphans` es la lista **completa** (contrástala con `stats.orphanCount`); `hubs` es un **top-30** por grado entrante, por diseño.
 
 ---
 
-## FASE 4 — Generar las secciones 5.1 → 5.9
+## FASE 4 — Entregables 01→09 vía subagentes
 
-**Objetivo:** producir los entregables Markdown poblados con datos reales y evidencia.
+**El orquestador no escribe estos documentos**: los delega. Cada agente lleva su método, sus anti-patrones y su checklist; no los dupliques aquí.
 
-Orden de generación. Cada uno copia su plantilla base de `assets/markdown-templates/` y la rellena.
+| Documento | Quién lo escribe | Plantilla | Referencia de apoyo |
+|---|---|---|---|
+| `01-funcional.md`, `02-arquitectura.md` | `agents/interface-analyzer.md` | `assets/markdown-templates/01-*`, `02-*` | `mermaid-rules.md` |
+| `03-modelo-datos.md` + ERs | `agents/data-modeler.md` | `03-modelo-datos.md` | `mermaid-rules.md` (Tipo B) |
+| `04-seguridad-grupos.md`, `05-integraciones-consumidas.md`, `06-apis-expuestas.md` | `agents/integration-security-analyzer.md` | `04-*`, `05-*`, `06-*` | `security-rules.md` |
+| `08-procesos-bpmn/*` | `agents/process-modeler.md` | `08-procesos-bpmn/pm-template.md`, `indice.md` | `bpmn-mapping.md` |
+| `07-batches.md`, `09-valor-adicional.md` | **el orquestador** (agregaciones) | `07-batches.md`, `09-valor-adicional.md` | ver abajo |
 
-### 4.1 — `01-funcional.md` (Explicación funcional)
+Orden: **4.1** `interface-analyzer` primero (los demás lo citan) → **4.2** los otros tres en paralelo (un único turno con varias llamadas `Agent`) → **4.3** el orquestador agrega. Patrón de invocación en `SKILL.md` § Fase 4.
 
-Lenguaje de negocio, sin jerga Appian. **Tres niveles obligatorios**:
-
-1. **Pitch** (1 párrafo): qué problema resuelve. Inferir de:
-   - `application.xml` → `<description>`.
-   - Nombre y descripción de records principales.
-   - Nombre del módulo principal.
-2. **Overview** (≈1 página): procesos funcionales principales y actores. Inferir de:
-   - Sites y sus páginas (entrada de usuario).
-   - Process models raíz.
-   - Grupos definidos = actores.
-3. **Detalle por flujo funcional**: para cada caso de uso identificado, paso a paso. Inferir combinando:
-   - Site / record action que lo dispara.
-   - User input tasks del process model que lo ejecuta.
-   - Decisiones (gateways) que marcan ramas.
-   - End events que marcan resultado.
-   - Notificaciones (emails) emitidas.
-
-Cada caso de uso debe citar los objetos Appian que lo implementan. Estado por afirmación.
-
-### 4.2 — `02-arquitectura.md` (Arquitectura de esta app)
-
-> No documentar la arquitectura genérica de Appian. Centrarse en los objetos reales nombrados y sus relaciones.
-
-1. **Diagrama Mermaid `flowchart`** con nodos = objetos reales y aristas = relaciones de uso, agrupados en capas:
-   - **Presentación:** Sites, Pages, Interfaces, Record Views.
-   - **Lógica:** Process Models, Expression Rules, Decisions.
-   - **Datos:** Record Types, CDTs, Data Stores, tablas.
-   - **Integración:** Connected Systems, Integrations, Web APIs.
-2. Las aristas se extraen del grafo de la Fase 3.
-3. Si el diagrama tiene >30 nodos, divídelo en sub-diagramas por capa o por módulo lógico (usa los prefijos de naming).
-4. Pasa cada diagrama por `scripts/validate_mermaid.py` antes de escribirlo. Si no pasa, sustituye por tabla.
-5. Render: escribe el `.mmd` en `_doc_generada/diagrams/arquitectura.mmd` y renderiza a SVG en Fase 5.
-
-### 4.3 — `03-modelo-datos.md` (Modelo de datos)
-
-1. **Diagrama ER en Mermaid `erDiagram`** con Record Types, CDTs y sus relaciones:
-   - FKs declaradas en XSD (`<xsd:keyref>`).
-   - Joins en record types (`<recordRelationship>`).
-   - Related records.
-2. **Por cada Record Type**:
-   | Campo | Tipo | Origen | Nullable | PK/FK | Visible en vista | Filtro |
-3. **Por cada Record Type — metadata**: nombre técnico, nombre visible, fuente (`<source>`: DB / servicio / proceso / expresión), CDT asociado, **record views** y campos mostrados, **related actions** (con su process model destino), filtros por defecto, campos clave.
-4. **Por cada CDT**: lista de campos con tipo, si está mapeado a tabla (anotaciones JPA `@Table` / `@Column` / `@OneToMany` en el XSD), namespace, dónde se usa (records / process variables / interfaces).
-
-### 4.4 — `04-seguridad-grupos.md` (Seguridad)
-
-1. **Árbol jerárquico** de groups (`<group>` con `<parentGroup>` y `<memberGroups>`). Renderiza como lista anidada Markdown o Mermaid `flowchart TD`.
-2. **Tabla por objeto sensible** (Sites, Interfaces, Process Models, Records, Folders, Web APIs):
-   | Objeto | Tipo | Viewer | Editor | Administrator | Initiator | Deny |
-3. **Matriz RACI** simplificada: filas = grupos, columnas = capacidades funcionales identificadas en la Fase 4.1 (ver dashboard X, iniciar proceso Y, administrar record Z).
-4. **Reglas de seguridad embebidas** detectadas en SAIL — recorrer expression rules e interfaces buscando:
-   - `a!isUserMemberOfGroup(group: cons!<GROUP>)`.
-   - `loggedInUserHasRole(...)`.
-   - Visibilidad condicional (`showWhen: a!isUserMemberOfGroup(...)`).
-   - Asignaciones dinámicas de tarea (`assignTo: cons!<GROUP>` o expresión).
-   Cada hallazgo cita ruta del fichero origen.
-
-### 4.5 — `05-integraciones-consumidas.md`
-
-Por cada **Integration** y **Connected System**:
-
-- Nombre técnico y nombre visible.
-- Sistema externo y propósito (inferido del nombre, descripción y URL base).
-- Tipo de Connected System (HTTP, OAuth 2.0, Salesforce, SAP, JDBC, plugin custom).
-- **Endpoint** completo (base URL del Connected System + path del Integration) + método HTTP.
-- Parámetros de path / query / headers.
-- **Estructura del request body** (extraída del `<requestBody>`).
-- **Autenticación** — enmascarar valores: Basic / OAuth client credentials / API key header / token referenciado por constant. Si la auth viene de ICF y el ICF está vacío, anotarlo como `⚠️ no determinado`.
-- **Estructura del response / output mapping**.
-- **Quién la invoca** (calle del grafo): process models / expression rules / interfaces que la usan.
-
-### 4.6 — `06-apis-expuestas.md`
-
-Por cada **Web API**:
-
-- URL pública: `/suite/webapi/<endpointPath>` + método HTTP.
-- Autenticación requerida (Basic, API key, autenticación por grupo).
-- Parámetros de query / path / header.
-- **Body de petición esperado** (estructura + ejemplo si es deducible del `<expression>`).
-- **Qué hace al invocarse**: extraer del `<expression>` los `a!startProcess`, `rule!`, `a!writeToDataStoreEntity` que ejecuta. Resumir como flujo.
-- **Respuesta**: estructura del return + códigos HTTP (200 / 4xx / 5xx) que puede emitir.
-- **Grupos autorizados** (rolemap) y caso de uso funcional asociado.
-
-### 4.7 — `07-batches.md`
+### 07-batches.md (lo escribe el orquestador)
 
 Por cada process model con start event temporal/recurrente:
-
 - Nombre, descripción, propósito funcional.
-- **Frecuencia**: extraer `<recurrence>` del start event. Traducir a:
-  - Lenguaje humano: "todos los días a las 02:00", "cada lunes a las 09:00".
-  - Cron equivalente cuando aplique.
-- **Próximas N ejecuciones** humanas (N=5) si es calculable desde la recurrencia.
-- Procesos hijos que dispara (`a!startProcess` o sub-process nodes).
+- **Frecuencia**: extraer `<recurrence>` del start event y traducirla a lenguaje humano ("todos los días a las 02:00") **y** a cron equivalente cuando aplique.
+- **Próximas 3 ejecuciones** si es calculable desde la recurrencia.
+- Procesos hijos que dispara (`a!startProcess` o nodos de subproceso).
 - Data stores e integraciones que toca (del grafo).
 - Volumetría esperada si es inferible: presencia de paginación (`a!queryEntity` con `pagingInfo`), `batchSize`.
 
-### 4.8 — `08-procesos-bpmn/`
+### 09-valor-adicional.md (lo escribe el orquestador)
 
-> Traducir el dibujo nativo de Appian a **BPMN 2.0 estándar**. Ver `references/bpmn-mapping.md` para mapeo completo, plantillas y estrategia de render.
-
-Por cada process model del inventario:
-
-1. Lee `<pm:node>` con `type` y `acProperties`.
-2. Lee flujos en `<pm:flow source="..." target="..."/>`.
-3. Detecta lanes (actores) y pools (sistemas externos) — ver `bpmn-mapping.md`.
-4. Aplica la tabla de mapeo Appian → BPMN 2.0.
-5. Decide estrategia de render por complejidad (Mermaid simple / Mermaid con prefijos lane / BPMN XML).
-6. Escribe `_doc_generada/08-procesos-bpmn/<PM_NOMBRE>.mmd` o `.bpmn`.
-7. Render a SVG en Fase 5.
-
-**Índice obligatorio** `08-procesos-bpmn/indice.md` con tabla por PM:
-
-| Process Model | Trigger | Actores (lanes) | Sistemas externos (pools) | Subprocesos invocados | Integraciones que llama | Data Stores que toca | Padre (quién lo invoca) | Diagrama |
-
-Más una **vista de grafo de procesos** (Mermaid `flowchart LR`) con las relaciones padre-hijo-hermano entre todos los process models.
-
-### 4.9 — `09-valor-adicional.md`
-
-**Solo incluir secciones donde haya hallazgos reales**. Para cada una, si no hay datos, **omítela**.
+**Solo incluir secciones donde haya hallazgos reales**. Si no hay datos para una, **omítela**.
 
 | Sección | Cómo extraerla |
 |---|---|
@@ -297,51 +167,67 @@ Más una **vista de grafo de procesos** (Mermaid `flowchart LR`) con las relacio
 
 ---
 
+## FASE 4.5 — Especificación de reconstrucción (solo `profundidad: rebuild`)
+
+Si `output_preferences.json` tiene `"depth": "onboarding"`, **salta esta fase entera**.
+
+1. `python scripts/parse_export.py --detail <ruta> --out <salida>/_intermedio/detail.json`.
+2. En paralelo: `interface-spec-writer` (pantallas + navegación, por lotes de ~10 interfaces), `logic-spec-writer` (reglas + decisions + constants + estados) y `process-modeler` en su 2ª invocación (fichas por nodo).
+3. Al terminar los tres: `backlog-writer` (historias Gherkin + matriz de trazabilidad).
+
+**Regla que invierte la del nivel onboarding**: aquí la jerga SAIL es **obligatoria** y los predicados se copian **exactos**. Los topes de longitud de `presentation-rules.md` **no aplican** a `10-especificacion/`: manda la exhaustividad (ver `execution-principles.md` § 11). Detalle de la orquestación en `SKILL.md` § Fase 4.5.
+
+---
+
 ## FASE 5 — Renderizar diagramas
 
-**Objetivo:** convertir `.mmd` y `.bpmn` en `.svg` para que el lector los vea inline en GitHub / VSCode / preview Markdown.
-
-### Acciones
-
-Llama a `bash scripts/render_diagrams.sh --batch <ruta>/_doc_generada/`. El script:
-
-1. Detecta `mmdc` (mermaid-cli) → renderiza todos los `.mmd` (Tipos A/B/C) a `.svg`.
-2. Los `.bpmn` XML se **entregan tal cual** — son fuente abrible en Camunda Modeler, draw.io o demo.bpmn.io, que calculan el layout automáticamente y muestran iconos BPMN auténticos.
-3. Si falta `mmdc`:
+1. `scripts/render_diagrams.sh --check` para saber si hay `mmdc`.
+2. **Iterative refinement, obligatorio**: cada bloque Mermaid pasa por `scripts/validate_mermaid.py` antes de escribirse. Si falla: refinar → re-validar, **máximo 3 iteraciones**. Tras la 3ª, sustituir por una **tabla equivalente** con la misma información.
+3. `scripts/render_diagrams.sh --batch <salida>` convierte `.mmd` → `.svg`.
+4. **Si `mmdc` no está disponible** (degradación elegante):
    - Deja el fichero fuente `.mmd` en su sitio.
-   - Embebe el contenido también dentro del Markdown asociado (en bloque ` ```mermaid` para que GitHub/VSCode rendericen on-the-fly).
+   - Embebe el contenido también dentro del Markdown asociado (en bloque ` ```mermaid ` para que GitHub/VSCode lo rendericen al vuelo).
    - Registra en `_intermedio/render_pendiente.txt` qué quedó sin renderizar.
+5. Los `.bpmn` **se entregan como XML tal cual**, no se renderizan aquí: el usuario los abre en Camunda Modeler, draw.io o demo.bpmn.io.
 
-### Salida
-
-- `_doc_generada/diagrams/arquitectura.svg` (+ `.mmd`)
-- `_doc_generada/diagrams/modelo-datos.svg` (+ `.mmd`)
-- `_doc_generada/08-procesos-bpmn/<PM>.svg` para cada PM
-- `_intermedio/render_pendiente.txt` con los pendientes.
+Tipos de diagrama y sus reglas (A: flowchart, B: erDiagram, C: lanes con subgraph): `references/mermaid-rules.md`.
 
 ---
 
 ## FASE 6 — Resumen ejecutivo
 
-**Objetivo:** sintetizar los hallazgos en `00-resumen-ejecutivo.md` para que un manager lo lea en 5 minutos.
+`00-resumen-ejecutivo.md`, ≤ 2 páginas, **se escribe al final** porque depende del resto. Criterios de selección:
 
-Se hace **al final** porque depende del resto.
-
-### Contenido (≤ 2 páginas)
-
-1. **Propósito de la aplicación** (1 párrafo, del Pitch del §4.1).
-2. **Volumen**: nº de objetos por tipo (tabla compacta).
-3. **Procesos críticos** (top 3-5): los process models con mayor grado entrante + los que tocan integraciones críticas.
-4. **Integraciones críticas** (top 3-5): las más invocadas + las que mueven más datos.
-5. **Riesgos top** (top 5-10) con criticidad: secretos expuestos, exposición pública indebida, integraciones sin manejo de error, objetos huérfanos en gran cantidad.
-6. **Pendientes de validación top** (top 5): qué hay que clarificar con el responsable funcional para cerrar la documentación.
-7. **Nivel de confianza global**: Alto / Medio / Bajo + justificación.
-8. **Próximos pasos recomendados** (3 puntos accionables).
+1. Pitch de la aplicación (2-4 frases, sin jerga Appian).
+2. Volumen por tipo de objeto.
+3. **Procesos críticos**: top 3-5 por grado entrante en el grafo y por criticidad de negocio.
+4. **Integraciones críticas**: top 3-5 (las que sostienen un flujo principal o tocan sistemas externos de negocio).
+5. APIs expuestas y batches, con una línea cada uno.
+6. **Riesgos top 5** de `09-valor-adicional.md`, con severidad.
+7. Objetos huérfanos (top 5) y pendientes principales.
+8. Nivel de confianza global, coherente con la tabla de cobertura de `coverage.json`.
 
 ---
 
-## FASE 7 — Devolver el índice al usuario
+## FASE 6.5 — Consolidar `summary.json`
 
-Devuelve la respuesta final con el formato exacto descrito en la sección "Formato de la respuesta final al usuario" del `SKILL.md`. No improvises.
+`python scripts/build_summary.py <salida>` produce `_intermedio/summary.json` (inventario + grafo + métricas + hallazgos normalizados). **Siempre se genera**: es barato y lo consumen los publishers de la Fase 7.
 
-Antes de cerrar, pasa por el checklist de "Validación final" del `SKILL.md`. Si falla alguno, corrige y vuelve a validar.
+---
+
+## FASE 7 — Publicación opcional
+
+Según `output_preferences.json`:
+- `pdf: true` → `agents/pdf-publisher.md` → `EXPORT.pdf`.
+- `dashboard: true` → `agents/dashboard-publisher.md` → `dashboard/index.html`.
+- Ambos false → saltar.
+
+Si se piden los dos, pueden ir **en paralelo**.
+
+---
+
+## FASE 8 — Respuesta final
+
+Devolver al usuario la **plantilla literal de `references/response-format.md`**, sin saludos ni comentarios añadidos. Incluye la tabla de cobertura copiada de `_intermedio/coverage.json` (no se escribe a mano) y el resultado de ambos gates.
+
+Antes de responder, completa el checklist de **Validación final** de `SKILL.md`: los dos gates en 0, secretos enmascarados, cero placeholders, y nada escrito fuera de `_doc_generada/`.
