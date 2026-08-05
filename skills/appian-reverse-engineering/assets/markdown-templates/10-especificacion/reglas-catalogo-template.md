@@ -10,7 +10,10 @@
   - El SAIL crudo SÍ se cita en Nivel 3, enmascarado si contiene secretos (security-rules.md).
   - Toda ficha lleva Evidencia: {ruta}#{fragmento}. Sección sin contenido = "N/A — {motivo}".
   - NIVELES: `##` para las tres secciones contenedoras, `###` para cada ficha.
-    El gate (check_coverage.py) reconoce la ficha por su cabecera, a cualquier nivel.
+    El gate (check_coverage.py) reconoce la ficha por el PREFIJO TIPADO de su
+    cabecera — `rule!`, `decision!`, `cons!` — a cualquier nivel de `#`. Sin ese
+    prefijo NO cuenta como ficha: `### DEMO_VAL_Importe` o "## Constantes usadas:
+    DEMO_CONS_X" son menciones, y el objeto seguirá saliendo en `missing`.
 -->
 
 # Catálogo de reglas: {{aplicación}}

@@ -21,12 +21,14 @@ Reglas (plan 2026-08-04-reverse-engineering-rebuild-spec, Task 4):
   integration, webApi, group y dataStore. Los demas tipos (interfaces,
   rules, ...) solo se reportan (informativo).
 - `--mode rebuild`: exige ademas interface, expressionRule, decision,
-  constant y site. Cada uno debe aparecer en `10-especificacion/` (sin
-  contar `trazabilidad.md`) o estar en `trazabilidad.md` marcado
-  `DESCARTADO: {motivo}` con motivo no vacio.
-  Nota de diseno: la fila `DOCUMENTADO` de trazabilidad.md no cuenta como
-  ficha — la matriz lista TODOS los objetos por contrato, asi que contarla
-  haria el gate trivialmente verde.
+  constant y site. Cada uno debe tener FICHA PROPIA en `10-especificacion/`
+  o estar en `trazabilidad.md` marcado `DESCARTADO: {motivo}` con motivo no
+  vacio.
+  Nota de diseno: ni `trazabilidad.md` ni `INVENTARIO.md` cuentan como
+  evidencia en NINGUN modo — ambos listan TODOS los objetos por contrato, asi
+  que contarlos hacia el gate trivialmente verde (con la matriz de
+  trazabilidad como unico documento, los 7 tipos de onboarding salian al
+  100%).
 
 Solo stdlib de Python 3.
 """
@@ -61,27 +63,39 @@ REBUILD_EXTRA = (
     "site",
 )
 
-# En modo `rebuild` TODOS los tipos de REBUILD_EXTRA necesitan FICHA PROPIA
-# (fichero dedicado o cabecera Markdown): una mencion de pasada no basta, porque
-# las fichas se citan entre si (el indice las lista, una pantalla nombra las
-# reglas que invoca) y eso convertia el gate en un tramite.
+# En modo `rebuild` TODOS los tipos de REBUILD_EXTRA necesitan FICHA PROPIA:
+# una mencion de pasada no basta, porque las fichas se citan entre si (el indice
+# las lista, una pantalla nombra las reglas que invoca) y eso convertia el gate
+# en un tramite.
 #
-# Donde vive la ficha de cada tipo:
-#   interface      -> 10-especificacion/pantallas/{interfaz}.md
+# Donde vive la ficha de cada tipo, y como se reconoce:
+#   interface      -> 10-especificacion/pantallas/{interfaz}.md  (fichero o su H1)
 #   expressionRule -> ### rule!X     en reglas-catalogo.md
 #   decision       -> ### decision!X en reglas-catalogo.md
 #   constant       -> ### cons!X     en reglas-catalogo.md  (seccion Constantes)
 #   site           -> ## site!X      en navegacion.md
-SHEET_REQUIRED = REBUILD_EXTRA
+#
+# El prefijo tipado (`rule!`, `cons!`, ...) es lo que distingue una FICHA de una
+# MENCION: sin el, cabeceras que la propia plantilla induce ("## Reglas
+# invocadas", "## Constantes usadas: X") daban por documentado cualquier objeto
+# citado bajo ellas.
+SHEET_PREFIXES = {
+    "expressionRule": ("rule!",),
+    "decision": ("decision!", "rule!"),
+    "constant": ("cons!",),
+    "site": ("site!",),
+}
+# Tipos cuya ficha es un documento entero, no una cabecera dentro de otro.
+SHEET_DOC_DIR = {"interface": "pantallas"}
 
 SPEC_DIR_NAME = "10-especificacion"
 TRAZA_FILE_NAME = "trazabilidad.md"
-
-# INVENTARIO.md lista TODOS los objetos del export por contrato (es un catalogo,
-# no documentacion). Si contara como evidencia, cualquier objeto estaria siempre
-# "documentado" y el gate no podria fallar nunca. Se excluye por el mismo motivo
-# que trazabilidad.md en el modo rebuild.
 CATALOG_FILE_NAME = "INVENTARIO.md"
+
+# Documentos que listan TODOS los objetos del export por contrato: son catalogos,
+# no documentacion. Si contaran como evidencia, cualquier objeto estaria siempre
+# "documentado" y el gate no podria fallar nunca.
+NOT_EVIDENCE = {CATALOG_FILE_NAME, TRAZA_FILE_NAME}
 
 # DESCARTADO: {motivo} — el motivo es obligatorio. En una fila de tabla md el
 # motivo vive en la celda: termina en `|` o fin de linea, y no vale que sea
@@ -114,7 +128,8 @@ def flatten_objects(inventory: dict[str, Any]) -> list[dict[str, Any]]:
     """Normaliza `objects` (dict tipo->lista, forma del parser, o lista plana).
 
     Descarta entradas sin `type` o sin `name` (p. ej. los ICF, que no son
-    objetos de diseno documentables).
+    objetos de diseno documentables) y fuerza `name`/`uuid`/`type` a str: un
+    inventario con `"name": 123` reventaba con TypeError dentro de re.escape.
     """
     raw = inventory.get("objects", {})
     flat: list[dict[str, Any]] = []
@@ -124,7 +139,16 @@ def flatten_objects(inventory: dict[str, Any]) -> list[dict[str, Any]]:
                 flat.extend(x for x in lst if isinstance(x, dict))
     elif isinstance(raw, list):
         flat = [x for x in raw if isinstance(x, dict)]
-    return [o for o in flat if o.get("type") and o.get("name")]
+    out: list[dict[str, Any]] = []
+    for o in flat:
+        if not o.get("type") or not o.get("name"):
+            continue
+        norm = dict(o)
+        norm["type"] = str(o["type"])
+        norm["name"] = str(o["name"])
+        norm["uuid"] = str(o["uuid"]) if o.get("uuid") else None
+        out.append(norm)
+    return out
 
 
 def read_markdown(doc_dir: Path) -> list[tuple[Path, str]]:
@@ -145,36 +169,84 @@ def in_spec_dir(path: Path, doc_dir: Path) -> bool:
     return SPEC_DIR_NAME in rel.parts
 
 
-def found_in(blob: str, name: str | None, uuid: str | None) -> bool:
-    if name and word_pattern(name).search(blob):
-        return True
-    if uuid and word_pattern(str(uuid)).search(blob):
-        return True
+def _covered_by_longer(blob: str, start: int, end: int, longer: tuple[str, ...]) -> bool:
+    """True si el match [start,end) cae dentro de un nombre mas largo."""
+    for l in longer:
+        idx = blob.find(l)
+        while idx != -1:
+            if idx <= start and end <= idx + len(l):
+                return True
+            idx = blob.find(l, idx + 1)
     return False
 
 
+def found_in(
+    blob: str, name: str | None, uuid: str | None, longer: tuple[str, ...] = ()
+) -> bool:
+    """Aparicion del objeto en el texto, ignorando las que son parte de otro.
+
+    `longer` son los nombres del inventario que CONTIENEN a `name`. Los record
+    types de Appian llevan espacios ("DEMO Solicitud"), y los limites de palabra
+    los aceptan como separador: sin este filtro, documentar solo
+    "DEMO Solicitud Historica" daba por documentada tambien "DEMO Solicitud".
+    """
+    for token in (name, str(uuid) if uuid else None):
+        if not token:
+            continue
+        for m in word_pattern(token).finditer(blob):
+            if longer and _covered_by_longer(blob, m.start(), m.end(), longer):
+                continue
+            return True
+    return False
+
+
+def _sheet_heading_pats(obj_type: str, tokens: list[str]) -> list[re.Pattern]:
+    """Patrones de cabecera-ficha: `### rule!X`, `## site!X`, ..."""
+    return [
+        re.compile(re.escape(prefix + token) + r"(?![A-Za-z0-9_])")
+        for prefix in SHEET_PREFIXES.get(obj_type, ())
+        for token in tokens
+    ]
+
+
 def has_own_sheet(
-    spec_docs: list[tuple[Path, str]], name: str | None, uuid: str | None
+    spec_docs: list[tuple[Path, str, tuple[str, ...]]],
+    obj_type: str,
+    name: str | None,
+    uuid: str | None,
 ) -> bool:
     """True si el objeto tiene FICHA PROPIA en 10-especificacion/.
 
-    Ficha propia = un fichero dedicado (su nombre coincide con el del objeto) o
-    una cabecera Markdown que lo nombra (`## rule!X`, `# Pantalla: ... (X)`).
+    Ficha propia significa, segun el tipo:
+      - fichero dedicado cuyo nombre ES el del objeto (cualquier tipo);
+      - interface: ademas, el H1 de un documento bajo `pantallas/` que lo nombra;
+      - resto: una cabecera con el PREFIJO TIPADO (`### rule!X`, `## site!X`).
 
-    Una simple mencion NO cuenta: en las fichas los objetos se citan entre si
-    (una pantalla nombra las reglas que invoca, el indice las lista todas), asi
-    que buscar en el texto concatenado daba por documentado cualquier objeto
-    citado de pasada y el gate pasaba en verde sin su ficha.
+    El prefijo es lo que separa ficha de mencion. Aceptar "cualquier cabecera que
+    nombre al objeto" dejaba pasar las que la propia plantilla induce — una ficha
+    con `## Constantes usadas: X` y `## Otras pantallas: Y` daba por documentados
+    a X e Y sin que existiera su ficha.
     """
-    pats = [word_pattern(t) for t in (name, str(uuid) if uuid else None) if t]
-    if not pats:
+    tokens = [t for t in (name, str(uuid) if uuid else None) if t]
+    if not tokens:
         return False
-    for path, text in spec_docs:
-        if any(p.search(path.stem) for p in pats):
+    heading_pats = _sheet_heading_pats(obj_type, tokens)
+    doc_dir_req = SHEET_DOC_DIR.get(obj_type)
+    word_pats = [word_pattern(t) for t in tokens]
+    for path, text, rel_parts in spec_docs:
+        if path.stem in tokens:
             return True
-        for line in text.splitlines():
-            if line.lstrip().startswith("#") and any(p.search(line) for p in pats):
-                return True
+        if heading_pats:
+            for line in text.splitlines():
+                if line.lstrip().startswith("#") and any(p.search(line) for p in heading_pats):
+                    return True
+        elif doc_dir_req is None or doc_dir_req in rel_parts:
+            # Sin prefijo tipado la ficha es el documento entero: solo cuenta su
+            # H1, nunca una cabecera de listado de nivel inferior.
+            for line in text.splitlines():
+                stripped = line.lstrip()
+                if stripped.startswith("# ") and any(p.search(stripped) for p in word_pats):
+                    return True
     return False
 
 
@@ -188,11 +260,14 @@ def is_discarded(traza_lines: list[str], name: str | None, uuid: str | None) -> 
     for line in traza_lines:
         if not has_discard_reason(line):
             continue
-        # El objeto debe ser el SUJETO de la fila (primera celda), no aparecer
-        # citado en el motivo: "DESCARTADO: obsoleta, su UI paso a X" descarta
-        # la fila, no a X. Sin esto, una sola fila podia dar por cubiertos a
-        # todos los objetos que nombrara.
-        subject = line.split("|")[1] if line.count("|") >= 2 else line
+        # El objeto debe ser el SUJETO, no aparecer citado en el motivo:
+        # "DESCARTADO: obsoleta, su UI paso a X" descarta la fila, no a X. En
+        # una tabla el sujeto es la primera celda; fuera de tabla, lo que hay
+        # antes del marcador (el motivo va siempre detras).
+        if line.count("|") >= 2:
+            subject = line.split("|")[1]
+        else:
+            subject = line.split("DESCARTADO")[0]
         if any(p.search(subject) for p in pats):
             return True
     return False
@@ -200,15 +275,12 @@ def is_discarded(traza_lines: list[str], name: str | None, uuid: str | None) -> 
 
 def build_coverage(doc_dir: Path, objects: list[dict[str, Any]], mode: str) -> dict[str, Any]:
     docs = read_markdown(doc_dir)
-    full_blob = "\n".join(
-        text for path, text in docs if path.name != CATALOG_FILE_NAME
-    )
+    full_blob = "\n".join(text for path, text in docs if path.name not in NOT_EVIDENCE)
     spec_docs = [
-        (path, text)
+        (path, text, path.relative_to(doc_dir).parts)
         for path, text in docs
-        if in_spec_dir(path, doc_dir) and path.name != TRAZA_FILE_NAME
+        if in_spec_dir(path, doc_dir) and path.name not in NOT_EVIDENCE
     ]
-    spec_blob = "\n".join(text for _, text in spec_docs)
     traza_lines: list[str] = []
     for path, text in docs:
         if path.name == TRAZA_FILE_NAME:
@@ -221,6 +293,11 @@ def build_coverage(doc_dir: Path, objects: list[dict[str, Any]], mode: str) -> d
     by_type: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for o in objects:
         by_type[o["type"]].append(o)
+
+    all_names = {o["name"] for o in objects}
+    longer_of = {
+        n: tuple(sorted(x for x in all_names if x != n and n in x)) for n in all_names
+    }
 
     types_report: dict[str, Any] = {}
     missing_map: dict[str, list[str]] = {}
@@ -235,19 +312,14 @@ def build_coverage(doc_dir: Path, objects: list[dict[str, Any]], mode: str) -> d
         for o in entries:
             name, uuid = o.get("name"), o.get("uuid")
             if spec_scope:
-                covered = (
-                    has_own_sheet(spec_docs, name, uuid)
-                    if obj_type in SHEET_REQUIRED
-                    else found_in(spec_blob, name, uuid)
-                )
-                if covered:
+                if has_own_sheet(spec_docs, obj_type, name, uuid):
                     documented.append(name)
                 elif is_discarded(traza_lines, name, uuid):
                     discarded.append(name)
                 else:
                     missing.append(name)
             else:
-                if found_in(full_blob, name, uuid):
+                if found_in(full_blob, name, uuid, longer_of.get(name, ())):
                     documented.append(name)
                 else:
                     missing.append(name)

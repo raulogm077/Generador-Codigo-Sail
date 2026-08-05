@@ -14,10 +14,12 @@ Contrato verificado (plan 2026-08-04-reverse-engineering-rebuild-spec, Task 4):
 - Modo onboarding: exige 100% de recordType, cdt, processModel, integration,
   webApi, group y dataStore; interfaces/rules solo se reportan (informativo).
 - Modo rebuild: exige ademas interface, expressionRule, decision, constant y
-  site — cada uno debe aparecer en `10-especificacion/` (sin contar
-  trazabilidad.md) o estar en trazabilidad.md marcado `DESCARTADO: {motivo}`.
-- Matching por nombre tecnico exacto (con limites de palabra) y por UUID como
-  fallback.
+  site — cada uno con FICHA PROPIA en `10-especificacion/` o marcado en
+  trazabilidad.md como `DESCARTADO: {motivo}`.
+- Ni trazabilidad.md ni INVENTARIO.md cuentan como evidencia en ningun modo:
+  listan todos los objetos por contrato.
+- Matching por nombre tecnico exacto (con limites de palabra, y sin dejar que
+  un nombre mas largo cubra a otro) y por UUID como fallback.
 """
 from __future__ import annotations
 
@@ -476,6 +478,128 @@ class CoverageTestCase(unittest.TestCase):
         proc, coverage = self.run_gate(doc, "rebuild")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn("DEMO_VAL_Muerta", coverage["missing"]["expressionRule"])
+
+    # ---------- regresiones de la 2a auditoria adversaria ----------
+
+    def test_trazabilidad_sola_no_cubre_el_modo_onboarding(self):
+        """Regresion (auditoria B3): trazabilidad.md se excluia de `spec_docs`
+        pero NO del blob general, asi que la matriz — que lista todos los
+        objetos por contrato — daba los 7 tipos requeridos al 100% con cero
+        documentacion real."""
+        doc = self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "processModel": [obj("processModel", "DEMO_PM_Aprobar", UUID_IFC)],
+            },
+            {
+                "10-especificacion/trazabilidad.md": (
+                    "| Objeto | Estado |\n|---|---|\n"
+                    "| `DEMO_RT_Solicitud` | DOCUMENTADO |\n"
+                    "| `DEMO_PM_Aprobar` | DOCUMENTADO |\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "onboarding")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_RT_Solicitud", coverage["missing"].get("recordType", []))
+        self.assertIn("DEMO_PM_Aprobar", coverage["missing"].get("processModel", []))
+
+    def test_rebuild_cabecera_de_listado_no_es_ficha(self):
+        """Regresion (auditoria B4): `has_own_sheet` aceptaba CUALQUIER cabecera
+        que nombrara al objeto, y las que lo disparan son justo las que induce la
+        plantilla ('## Reglas invocadas', '## Constantes usadas'). Una sola ficha
+        de pantalla daba por documentados a 4 objetos sin ficha."""
+        doc = self.make_doc(
+            {
+                "interface": [
+                    obj("interface", "DEMO_IFC_Form", UUID_IFC),
+                    obj("interface", "DEMO_IFC_Huerfana", UUID_IFC_2),
+                ],
+                "constant": [obj("constant", "DEMO_CONS_SIN_FICHA", UUID_RT_2)],
+                "expressionRule": [obj("expressionRule", "DEMO_R", UUID_ER)],
+            },
+            {
+                "10-especificacion/pantallas/DEMO_IFC_Form.md": (
+                    "# Pantalla: Alta (`DEMO_IFC_Form`)\n\n"
+                    "## Constantes usadas: DEMO_CONS_SIN_FICHA\n\n"
+                    "## Otras pantallas relacionadas: DEMO_IFC_Huerfana\n\n"
+                    "## Reglas: DEMO_R\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_CONS_SIN_FICHA", coverage["missing"].get("constant", []))
+        self.assertIn("DEMO_IFC_Huerfana", coverage["missing"].get("interface", []))
+        self.assertIn("DEMO_R", coverage["missing"].get("expressionRule", []))
+        # La ficha real sigue contando.
+        self.assertNotIn("DEMO_IFC_Form", coverage["missing"].get("interface", []))
+
+    def test_rebuild_ficha_de_pantalla_debe_vivir_en_pantallas(self):
+        """Regresion (auditoria B5): las dos puertas discrepaban sobre donde vive
+        una ficha, asi que una en `10-especificacion/screens/` pasaba coverage
+        sin que layout llegara a validar sus secciones. El contrato es
+        `10-especificacion/pantallas/{interfaz}.md`."""
+        doc = self.make_doc(
+            {"interface": [obj("interface", "DEMO_IFC_A", UUID_IFC)]},
+            {"10-especificacion/screens/otra.md": "# Pantalla: A (`DEMO_IFC_A`)\n"},
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_IFC_A", coverage["missing"].get("interface", []))
+
+    def test_nombre_con_espacio_no_lo_cubre_uno_mas_largo(self):
+        """Regresion (auditoria M4): los record types de Appian llevan espacios y
+        los limites de palabra los aceptan como separador, asi que documentar
+        'DEMO Solicitud Historica' daba por documentada 'DEMO Solicitud'."""
+        doc = self.make_doc(
+            {
+                "recordType": [
+                    obj("recordType", "DEMO Solicitud", UUID_RT_1),
+                    obj("recordType", "DEMO Solicitud Historica", UUID_RT_2),
+                ]
+            },
+            {"03-modelo-datos.md": "# Modelo\n\nDEMO Solicitud Historica guarda el archivo.\n"},
+        )
+        proc, coverage = self.run_gate(doc, "onboarding")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO Solicitud", coverage["missing"].get("recordType", []))
+        self.assertNotIn("DEMO Solicitud Historica", coverage["missing"].get("recordType", []))
+
+    def test_descartado_fuera_de_tabla_no_arrastra_al_objeto_citado(self):
+        """Regresion (auditoria M5): el aislamiento del sujeto solo funcionaba en
+        filas de tabla; sin pipes se comparaba contra la linea entera y el objeto
+        citado en el motivo quedaba descartado tambien."""
+        doc = self.make_doc(
+            {
+                "interface": [
+                    obj("interface", "DEMO_IFC_A", UUID_IFC),
+                    obj("interface", "DEMO_IFC_B", UUID_IFC_2),
+                ]
+            },
+            {
+                "10-especificacion/trazabilidad.md": (
+                    "# Trazabilidad\n\n"
+                    "DEMO_IFC_A -- DESCARTADO: obsoleta, su UI paso a DEMO_IFC_B\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_IFC_A", coverage["types"]["interface"]["discarded"])
+        self.assertIn("DEMO_IFC_B", coverage["missing"].get("interface", []))
+
+    def test_nombre_no_string_no_revienta(self):
+        """Regresion (auditoria M6): `"name": 123` daba TypeError dentro de
+        re.escape y salia con exit 1, indistinguible de 'falta documentacion'."""
+        doc = self.make_doc(
+            {"interface": [{"type": "interface", "name": 123, "uuid": UUID_IFC}]},
+            {"10-especificacion/pantallas/123.md": "# Pantalla 123\n"},
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(coverage["types"]["interface"]["documented"], 1)
 
     # ---------- errores de uso ----------
 

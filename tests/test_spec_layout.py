@@ -6,7 +6,7 @@ fallar no es un gate.
 
 Corre con: python -m unittest tests.test_spec_layout -v
 """
-import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,18 +17,31 @@ ROOT = Path(__file__).parents[1]
 SCRIPT = ROOT / "skills" / "appian-reverse-engineering" / "scripts" / "check_spec_layout.py"
 
 FICHA_OK = """# Pantalla: Alta (`DEMO_IFC_Form`)
+**Tipo**: formulario · **Usada desde**: `DEMO_SITE_X`
 
 ## Entradas (rule inputs)
 | ri! | Tipo |
+|---|---|
 | `importe` | Decimal |
+
+## Variables locales relevantes
+N/A — la pantalla no declara `a!localVariables`.
 
 ## Componentes (en orden de aparición, TODOS)
 | # | Componente |
+|---|---|
 | 1 | textField |
 
 ## Acciones (botones/links)
 | Acción | Qué hace |
+|---|---|
 | Enviar | submit |
+
+## Reglas invocadas
+N/A — la pantalla no invoca reglas.
+
+## Estados de la pantalla
+N/A — el render no cambia según el estado.
 
 ## Criterios de reconstrucción (verificables)
 - [ ] Con importe > 1000 el campo Justificación es obligatorio.
@@ -39,10 +52,18 @@ class SpecLayoutTestCase(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="speclayout_"))
 
-    def make_doc(self, docs: dict) -> Path:
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def make_doc(self, docs: dict, extra_raiz: dict | None = None) -> Path:
+        """Crea `<tmp>/_doc_generada/...`; `extra_raiz` cuelga del contenedor."""
         doc = self.tmp / "_doc_generada"
         for rel, texto in docs.items():
             p = doc / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(texto, encoding="utf-8")
+        for rel, texto in (extra_raiz or {}).items():
+            p = self.tmp / rel
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(texto, encoding="utf-8")
         return doc
@@ -59,10 +80,26 @@ class SpecLayoutTestCase(unittest.TestCase):
             "10-especificacion/reglas-catalogo.md": "# Catalogo\n\n## Expression rules\n\n### rule!DEMO_R\n",
         }
 
+    def con_nav(self, cuerpo: str) -> dict:
+        docs = self.base_docs()
+        docs["10-especificacion/navegacion.md"] = f"# Nav\n\n## site!DEMO_S\n{cuerpo}\n"
+        return docs
+
     # --- caso feliz ---
 
     def test_estructura_correcta_exit_0(self):
         proc = self.run_gate(self.make_doc(self.base_docs()))
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_acepta_la_carpeta_contenedora(self):
+        """Pasar el export en vez de _doc_generada debe dar el MISMO veredicto.
+
+        Con el orden de candidatos invertido, rglob encontraba los .md de dentro
+        y se quedaba con el contenedor: 'falta 10-especificacion/' + todos los
+        enlaces relativos rotos, sobre una salida perfectamente valida.
+        """
+        self.make_doc(self.base_docs())
+        proc = self.run_gate(self.tmp)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
     # --- 1. layout ---
@@ -85,19 +122,55 @@ class SpecLayoutTestCase(unittest.TestCase):
     # --- 2. enlaces ---
 
     def test_enlace_roto_exit_1(self):
-        docs = self.base_docs()
-        docs["10-especificacion/navegacion.md"] = (
-            "# Nav\n\n## site!DEMO_S\nVer [ficha](pantallas/NO_EXISTE.md).\n"
-        )
+        proc = self.run_gate(self.make_doc(self.con_nav("Ver [ficha](pantallas/NO_EXISTE.md).")))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("enlace roto", proc.stdout)
+
+    def test_enlace_a_documento_de_onboarding_ausente_se_tolera(self):
+        """La spec puede entregarse sin los documentos 00-09 al lado."""
+        proc = self.run_gate(self.make_doc(self.con_nav("Ver [datos](../03-modelo-datos.md).")))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_ruta_mal_construida_a_documento_presente_exit_1(self):
+        """Si el documento SI esta en la salida, la ruta tiene que ser correcta.
+
+        Antes bastaba con que el basename estuviera en ONBOARDING_DOCS para
+        silenciar el enlace: el gate no podia detectar un `../` de menos hacia
+        los 10 documentos que mas se enlazan.
+        """
+        docs = self.con_nav("Ver [datos](03-modelo-datos.md).")  # falta ../
+        docs["03-modelo-datos.md"] = "# Modelo de datos\n"
         proc = self.run_gate(self.make_doc(docs))
         self.assertEqual(proc.returncode, 1)
         self.assertIn("enlace roto", proc.stdout)
 
-    def test_enlace_a_documento_de_onboarding_se_tolera(self):
-        """La spec puede entregarse sin los documentos 00-09 al lado."""
-        docs = self.base_docs()
-        docs["10-especificacion/navegacion.md"] = (
-            "# Nav\n\n## site!DEMO_S\nVer [datos](../03-modelo-datos.md).\n"
+    def test_enlace_fuera_del_arbol_exit_1_sin_traceback(self):
+        """`../../fuera.md` reventaba con ValueError al calcular el ancla."""
+        docs = self.con_nav("Ver [fuera](../../fuera.md#seccion).")
+        proc = self.run_gate(self.make_doc(docs, extra_raiz={"fuera.md": "# Seccion\n"}))
+        self.assertEqual(proc.returncode, 1)
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertIn("fuera del arbol", proc.stdout)
+
+    def test_enlace_a_directorio_exit_1(self):
+        proc = self.run_gate(self.make_doc(self.con_nav("Ver [la carpeta](pantallas).")))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("directorio", proc.stdout)
+
+    def test_formas_validas_de_commonmark_no_son_enlaces_rotos(self):
+        """Titulo tras el destino, destino entre <> y %-encoding son estandar."""
+        docs = self.con_nav(
+            'Ver [a](pantallas/DEMO_IFC_Form.md "La ficha"), '
+            "[b](<pantallas/DEMO_IFC_Form.md>) y "
+            "[c](pantallas/DEMO%20espacio.md)."
+        )
+        docs["10-especificacion/pantallas/DEMO espacio.md"] = FICHA_OK
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_enlaces_dentro_de_un_bloque_de_codigo_se_ignoran(self):
+        docs = self.con_nav(
+            "Formato de la tabla:\n\n```markdown\n| Ficha | [x](pantallas/{{nombre}}.md) |\n```\n"
         )
         proc = self.run_gate(self.make_doc(docs))
         self.assertEqual(proc.returncode, 0, proc.stdout)
@@ -105,20 +178,18 @@ class SpecLayoutTestCase(unittest.TestCase):
     # --- 3. anclas ---
 
     def test_ancla_rota_exit_1(self):
-        docs = self.base_docs()
-        docs["10-especificacion/navegacion.md"] = (
-            "# Nav\n\n## site!DEMO_S\nVer [regla](reglas-catalogo.md#rulenoexiste).\n"
-        )
-        proc = self.run_gate(self.make_doc(docs))
+        proc = self.run_gate(self.make_doc(
+            self.con_nav("Ver [regla](reglas-catalogo.md#rulenoexiste).")))
         self.assertEqual(proc.returncode, 1)
         self.assertIn("ancla rota", proc.stdout)
 
     def test_ancla_valida_no_falla(self):
-        docs = self.base_docs()
-        docs["10-especificacion/navegacion.md"] = (
-            "# Nav\n\n## site!DEMO_S\nVer [regla](reglas-catalogo.md#ruledemo_r).\n"
-        )
-        proc = self.run_gate(self.make_doc(docs))
+        proc = self.run_gate(self.make_doc(
+            self.con_nav("Ver [regla](reglas-catalogo.md#ruledemo_r).")))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_enlace_al_principio_del_documento_no_es_ancla_rota(self):
+        proc = self.run_gate(self.make_doc(self.con_nav("[Subir](#)")))
         self.assertEqual(proc.returncode, 0, proc.stdout)
 
     # --- 4. plantilla de pantalla ---
@@ -132,6 +203,26 @@ class SpecLayoutTestCase(unittest.TestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertIn("## Acciones", proc.stdout)
 
+    def test_ficha_con_seccion_vacia_exit_1(self):
+        """Cabecera sin cuerpo = seccion sin documentar; el contrato exige
+        contenido o un 'N/A — {motivo}' explicito."""
+        docs = self.base_docs()
+        docs["10-especificacion/pantallas/DEMO_IFC_Form.md"] = FICHA_OK.replace(
+            "## Reglas invocadas\nN/A — la pantalla no invoca reglas.",
+            "## Reglas invocadas\n",
+        )
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("esta vacia", proc.stdout)
+
+    def test_ficha_en_subcarpeta_tambien_se_valida(self):
+        """Con glob no recursivo, agrupar por modulo saltaba la validacion."""
+        docs = self.base_docs()
+        docs["10-especificacion/pantallas/modulo1/DEMO_IFC_B.md"] = "# Ficha vacia\nNada.\n"
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("DEMO_IFC_B.md", proc.stdout)
+
     def test_ficha_sin_criterios_verificables_exit_1(self):
         docs = self.base_docs()
         docs["10-especificacion/pantallas/DEMO_IFC_Form.md"] = FICHA_OK.replace(
@@ -142,6 +233,14 @@ class SpecLayoutTestCase(unittest.TestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertIn("criterios de reconstruccion", proc.stdout)
 
+    def test_criterio_ya_verificado_cuenta(self):
+        docs = self.base_docs()
+        docs["10-especificacion/pantallas/DEMO_IFC_Form.md"] = FICHA_OK.replace(
+            "- [ ] Con", "- [x] Con"
+        )
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
     # --- 5. higiene ---
 
     def test_placeholder_sin_rellenar_exit_1(self):
@@ -150,6 +249,21 @@ class SpecLayoutTestCase(unittest.TestCase):
         proc = self.run_gate(self.make_doc(docs))
         self.assertEqual(proc.returncode, 1)
         self.assertIn("placeholder", proc.stdout)
+
+    def test_tbd_es_placeholder(self):
+        docs = self.base_docs()
+        docs["10-especificacion/reglas-catalogo.md"] += "\nMotivo: TBD\n"
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("TBD", proc.stdout)
+
+    def test_placeholder_dentro_de_un_bloque_de_codigo_se_ignora(self):
+        docs = self.base_docs()
+        docs["10-especificacion/reglas-catalogo.md"] += (
+            "\nPlantilla:\n\n```\n### rule!{{nombre}}\n```\n"
+        )
+        proc = self.run_gate(self.make_doc(docs))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
 
     # --- uso ---
 
