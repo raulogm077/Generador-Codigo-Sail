@@ -127,7 +127,27 @@ class TestDetail(unittest.TestCase):
         rt = self.detail["recordTypes"]["DEMO Solicitud"]
         self.assertEqual(rt["relationships"][0]["target"], "DEMO Historial")
         self.assertIn("Resumen", rt["views"])
-        self.assertIn("Nueva solicitud", rt["actions"])
+        # Las acciones ya no son solo el nombre: la spec necesita saber QUE
+        # proceso lanzan y si estan ocultas (`visibilityExpr: =false()` deja una
+        # accion inalcanzable desde la UI sin borrarla).
+        accion = rt["actions"][0]
+        self.assertEqual(accion["name"], "Nueva solicitud")
+        self.assertEqual(accion["target"], "DEMO_PM_AprobarSolicitud")
+        self.assertIn("visibilityExpr", accion)
+
+    def test_record_type_fields_con_nombre_y_uuid(self):
+        """Regresion del export real: los datos del campo son elementos hijos,
+        no atributos. Leyendo solo atributos, los 354 campos de una app real
+        salian con `name: null` y la spec no podia traducir las referencias
+        `urn:appian:record-field:v1:{rt}/{campo}` a ningun nombre legible."""
+        rt = self.detail["recordTypes"]["DEMO Solicitud"]
+        campos = rt["fields"]
+        self.assertTrue(campos)
+        for c in campos:
+            self.assertTrue(c["name"], c)
+            self.assertIn("uuid", c)  # es lo que resuelve urn:appian:record-field
+        nombres = {c["name"] for c in campos}
+        self.assertIn("estado", nombres)
 
     def test_interface_sail_and_referenced_record_types(self):
         ifc = self.detail["interfaces"]["DEMO_IFC_SolicitudForm"]

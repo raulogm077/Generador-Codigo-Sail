@@ -981,6 +981,28 @@ def _haul_inner(path: Path) -> ET.Element | None:
 RT_FIELD_UUID_RE = re.compile(r"recordType!\{([0-9a-fA-F\-]{36})\}")
 
 
+def _direct_text(el: ET.Element, *names: str) -> str | None:
+    """Texto de un hijo DIRECTO por nombre de tag.
+
+    Los exports reales meten los datos del objeto en elementos hijos, no en
+    atributos, y `find_first_text` busca en profundidad — util para localizar
+    algo suelto, peligroso para leer campos (se traeria el de un subelemento).
+    """
+    for c in el:
+        if strip_ns(c.tag) in names:
+            txt = (c.text or "").strip()
+            if txt:
+                return txt
+    return None
+
+
+def _clean_type(t: str | None) -> str | None:
+    """`{http://www.appian.com/ae/types/2009}Integer` -> `Integer`."""
+    if not t:
+        return None
+    return t.split("}")[-1].strip() or None
+
+
 def _sail_of(inner: ET.Element) -> str:
     for el in inner.iter():
         if strip_ns(el.tag) == "definition" and el.text:
@@ -988,14 +1010,36 @@ def _sail_of(inner: ET.Element) -> str:
     return ""
 
 
-def _rule_inputs_of(inner: ET.Element) -> list[dict[str, Any]]:
+def _rule_inputs_of(
+    inner: ET.Element, uuid_to_name: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
+    """Rule inputs de una interfaz o regla.
+
+    Un export real no usa <ruleInput>: los declara como <namedTypedValue>, con
+    el tipo en <type><name> — y para los tipados por record type ese <name> es
+    el UUID del record type, que hay que resolver o la ficha queda con un UUID
+    donde deberia ir "MIM Candidate". Sin esto, las 27 interfaces de una app
+    real salian con `ruleInputs: []`.
+    """
     out = []
     for el in inner.iter():
-        if strip_ns(el.tag) != "ruleInput":
+        if strip_ns(el.tag) not in ("ruleInput", "namedTypedValue"):
             continue
+        nombre = get_attr_any(el, "name") or _direct_text(el, "name")
+        if not nombre:
+            continue
+        tipo = get_attr_any(el, "type")
+        if not tipo:
+            for c in el:
+                if strip_ns(c.tag) != "type":
+                    continue
+                tipo = _direct_text(c, "name", "typeName") or (c.text or "").strip()
+                if uuid_to_name and tipo in uuid_to_name:
+                    tipo = uuid_to_name[tipo]
+                break
         out.append({
-            "name": get_attr_any(el, "name") or find_first_text(el, "name"),
-            "type": get_attr_any(el, "type") or find_first_text(el, "type", "typeName"),
+            "name": nombre,
+            "type": _clean_type(tipo),
             "required": _to_bool(get_attr_any(el, "required")),
         })
     return out
@@ -1082,28 +1126,62 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
         if inner is None:
             continue
         entry: dict[str, Any] = {"uuid": o.get("uuid"), "path": o["path"], "fields": [], "relationships": [], "views": [], "actions": []}
+        # En un export real los datos del campo NO son atributos sino elementos
+        # hijos (<fieldName>, <displayName>, <uuid>...). Leyendo solo atributos,
+        # los 354 campos de esta app salian con `name: null` y la spec no podia
+        # traducir `urn:appian:record-field:v1:{rt}/{campo}` a nada legible.
         for el in inner.iter():
             tag = strip_ns(el.tag)
             if tag == "field":
+                nombre = get_attr_any(el, "name") or _direct_text(el, "fieldName", "name")
                 entry["fields"].append({
-                    "name": get_attr_any(el, "name"),
-                    "type": get_attr_any(el, "type"),
+                    # El uuid es lo que resuelve las referencias urn:appian:record-field.
+                    "uuid": _direct_text(el, "uuid"),
+                    "name": nombre,
+                    "displayName": _direct_text(el, "displayName") or nombre,
+                    "type": _clean_type(
+                        get_attr_any(el, "type") or _direct_text(el, "type", "sourceFieldType")
+                    ),
+                    "sourceFieldName": _direct_text(el, "sourceFieldName"),
                     "required": _to_bool(get_attr_any(el, "required")),
+                    "isRecordId": _to_bool(_direct_text(el, "isRecordId")),
+                    "isCustomField": _to_bool(_direct_text(el, "isCustomField")),
+                    "customFieldExpr": _direct_text(el, "customFieldExpr"),
+                    "isHidden": _to_bool(_direct_text(el, "isHidden")),
                 })
-            elif tag == "relationship":
+            elif tag in ("relationship", "recordRelationshipCfg"):
+                destino = get_attr_any(el, "target", "targetRecordType")
+                if not destino:
+                    tgt_uuid = _direct_text(el, "targetRecordTypeUuid")
+                    destino = uuid_to_name.get(tgt_uuid or "", tgt_uuid)
                 entry["relationships"].append({
-                    "name": get_attr_any(el, "name"),
-                    "target": get_attr_any(el, "target", "targetRecordType"),
-                    "type": get_attr_any(el, "type", "relationshipType"),
+                    "name": get_attr_any(el, "name") or _direct_text(el, "relationshipName"),
+                    "target": destino,
+                    "type": (
+                        get_attr_any(el, "type", "relationshipType")
+                        or _direct_text(el, "relationshipType")
+                    ),
                 })
-            elif tag in ("view", "recordView"):
-                nm = get_attr_any(el, "name")
+            elif tag in ("view", "recordView", "recordViewCfg"):
+                nm = get_attr_any(el, "name") or _direct_text(el, "name", "staticName")
                 if nm:
                     entry["views"].append(nm)
-            elif tag in ("action", "recordAction", "relatedAction"):
-                nm = get_attr_any(el, "name")
-                if nm:
-                    entry["actions"].append(nm)
+            elif tag in ("action", "recordAction", "relatedAction", "relatedActionCfg"):
+                nm = get_attr_any(el, "name") or _direct_text(el, "name", "staticName")
+                destino = get_attr_any(el, "process")
+                if not destino:
+                    for c in el:
+                        if strip_ns(c.tag) in ("target", "processModelRef"):
+                            tgt = get_attr_any(c, "uuid") or (c.text or "").strip()
+                            destino = uuid_to_name.get(tgt, tgt)
+                            break
+                # `visibilityExpr: =false()` es la forma de dejar una accion
+                # inalcanzable desde la UI sin borrarla: dato clave para la spec.
+                entry["actions"].append({
+                    "name": nm or destino,
+                    "target": destino,
+                    "visibilityExpr": _direct_text(el, "visibilityExpr"),
+                })
         detail["recordTypes"][o["name"]] = entry
 
     for section, obj_type in (("interfaces", "interface"), ("expressionRules", "expressionRule")):
@@ -1116,7 +1194,7 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             detail[section][o["name"]] = {
                 "uuid": o.get("uuid"),
                 "path": o["path"],
-                "ruleInputs": _rule_inputs_of(inner),
+                "ruleInputs": _rule_inputs_of(inner, uuid_to_name),
                 **refs,
                 "sail": sail,
             }
@@ -1217,16 +1295,29 @@ def cmd_detail(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
         for el in inner.iter():
             if strip_ns(el.tag) not in ("page", "sitePage"):
                 continue
-            target_uuid = (
-                get_attr_any(el, "objectUuid", "uuid", "targetUuid")
-                or find_first_text(el, "objectUuid", "targetUuid", "uuid", max_depth=3)
-            )
+            # OJO: el atributo `uuid` de <page> es el de la PROPIA pagina; el
+            # objeto que muestra va en un hijo (<uiObject a:uuid=...>). Tomar el
+            # de la pagina apuntaba a un objeto inexistente y el destino se
+            # perdia. Y el nombre visible es <staticName>, no un atributo.
+            target_uuid = get_attr_any(el, "objectUuid", "targetUuid")
+            page_type = get_attr_any(el, "type", "pageType") or _direct_text(el, "type", "pageType")
+            for c in el:
+                if strip_ns(c.tag) not in ("uiObject", "recordTypeRef", "target", "objectRef"):
+                    continue
+                target_uuid = target_uuid or get_attr_any(c, "uuid", "objectUuid") or (c.text or "").strip()
+                # xsi:type distingue interfaz (ContentFreeformRule) de record list.
+                page_type = page_type or _clean_type(get_attr_any(c, "type"))
+                break
+            target_uuid = target_uuid or get_attr_any(el, "uuid")
             pages.append({
-                "name": get_attr_any(el, "name") or find_first_text(el, "name", max_depth=2),
-                "type": get_attr_any(el, "type", "pageType")
-                or find_first_text(el, "type", "pageType", max_depth=2),
+                "name": (
+                    get_attr_any(el, "name")
+                    or _direct_text(el, "staticName", "name", "displayName")
+                ),
+                "type": page_type,
                 "target": uuid_to_name.get(target_uuid or "", target_uuid),
-                "urlStub": get_attr_any(el, "urlStub") or find_first_text(el, "urlStub", max_depth=2),
+                "description": _direct_text(el, "description"),
+                "urlStub": get_attr_any(el, "urlStub") or _direct_text(el, "urlStub"),
             })
         detail["sites"][o["name"]] = {
             "uuid": o.get("uuid"),
