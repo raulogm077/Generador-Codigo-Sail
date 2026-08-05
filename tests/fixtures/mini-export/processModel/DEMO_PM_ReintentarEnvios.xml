@@ -33,7 +33,7 @@
 ).data]]></a:expression>
       </a:node>
       <a:node type="gateway" name="Ejecutor autorizado?" id="b2">
-        <a:condition><![CDATA[a!isUserMemberOfGroup(username: loggedInUser(), groups: cons!DEMO_GRP_Aprobadores)]]></a:condition>
+        <a:condition><![CDATA[a!isUserMemberOfGroup(username: loggedInUser(), groups: cons!DEMO_CONS_GRP_APROBADORES)]]></a:condition>
       </a:node>
       <a:node type="subProcess" name="Reprocesar aprobacion" id="b3">
         <a:processModelUuid>00000000-0000-0000-0000-000000000009</a:processModelUuid>

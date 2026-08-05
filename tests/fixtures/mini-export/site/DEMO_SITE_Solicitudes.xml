@@ -8,7 +8,7 @@
     <pages>
       <page name="Solicitudes" type="RECORD_LIST" urlStub="solicitudes"
             objectUuid="00000000-0000-0000-0000-000000000011">
-        <description>Listado de registros: urn:appian:record-type:v1:00000000-0000-0000-0000-000000000011</description>
+        <description>Listado de solicitudes del usuario.</description>
       </page>
       <page name="Nueva solicitud" type="INTERFACE" urlStub="nueva"
             objectUuid="00000000-0000-0000-0000-000000000001">

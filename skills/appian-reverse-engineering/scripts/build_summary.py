@@ -86,7 +86,10 @@ def main(doc_root: str) -> int:
     pm_indegree = Counter()
     pm_calls_integrations = Counter()
     for e in edges:
-        if e["target"] in pm_by_id and e["refType"] in ("startProcess", "subProcess"):
+        # OJO con el nombre: cmd_graph emite "subprocess" en minusculas. Escrito
+        # "subProcess", este filtro no casaba nunca y los PM invocados como
+        # subproceso salian con grado entrante 0 en el resumen.
+        if e["target"] in pm_by_id and e["refType"] in ("startProcess", "subprocess", "recordAction"):
             pm_indegree[e["target"]] += 1
         if e["source"] in pm_by_id and e["refType"] == "integrationCall":
             pm_calls_integrations[e["source"]] += 1

@@ -1,7 +1,7 @@
 <!--
   Salida esperada (verificación en seco) del agente backlog-writer sobre
   tests/fixtures/mini-export. Una fila por CADA objeto de inventory.json:
-  el inventario real del fixture aplana a 18 objetos. CU-01/CU-02 corresponden a las épicas de backlog.md; en una
+  el inventario real del fixture aplana a 19 objetos. CU-01/CU-02 corresponden a las épicas de backlog.md; en una
   ejecución real vendrían de 01-funcional.md.
 -->
 
@@ -27,5 +27,6 @@
 | `DEMO_CONS_ENTITY_SOLICITUD` (constant) | — | HU-006 | `reglas-catalogo.md` | DOCUMENTADO |
 | `DEMO_PM_ReintentarEnvios` (processModel) | CU-03 | HU-006 | `procesos/DEMO_PM_ReintentarEnvios-nodos.md` | DOCUMENTADO |
 | `DEMO_SITE_Solicitudes` (site) | CU-01, CU-02 | HU-002, HU-004 | `navegacion.md` | DOCUMENTADO |
+| `DEMO_CONS_GRP_APROBADORES` (constant) | CU-01, CU-03 | HU-003, HU-006 | `reglas-catalogo.md` | DOCUMENTADO |
 
-**Cobertura**: 18/18 objetos (100%)
+**Cobertura**: 19/19 objetos (100%)

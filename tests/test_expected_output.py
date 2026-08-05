@@ -7,8 +7,11 @@ contratos distintos (layout, ficha de procesos ausente, alias de nombre tecnico)
 
 Este test NO compara byte a byte — la salida de un LLM varia. Comprueba
 INVARIANTES: que la referencia sigue siendo un ejemplo valido del contrato que la
-propia skill exige. El invariante ancla es el gate real (`check_coverage.py
---mode rebuild`), que detecta por construccion los errores de layout.
+propia skill exige. Los invariantes ancla son los DOS gates reales
+(`check_coverage.py` y `check_spec_layout.py`), que se ejecutan tal cual: enlaces,
+anclas, layout y plantilla NO se revalidan aqui con una copia de su logica —
+esa copia ya diverjo una vez (la lista de placeholders del gate y la del test
+dejaron de coincidir en silencio).
 
 Corre con: python -m unittest tests.test_expected_output -v
 """
@@ -27,26 +30,7 @@ EXPECTED = ROOT / "tests" / "fixtures" / "expected-output"
 SCRIPTS = ROOT / "skills" / "appian-reverse-engineering" / "scripts"
 PARSER = SCRIPTS / "parse_export.py"
 COVERAGE = SCRIPTS / "check_coverage.py"
-
-# Documentos del nivel onboarding: existen en una ejecucion real, no en este
-# fixture (que solo ilustra la capa 10-especificacion).
-ONBOARDING_DOCS = {
-    "00-resumen-ejecutivo.md", "01-funcional.md", "02-arquitectura.md",
-    "03-modelo-datos.md", "04-seguridad-grupos.md", "05-integraciones-consumidas.md",
-    "06-apis-expuestas.md", "07-batches.md", "09-valor-adicional.md",
-    "INVENTARIO.md",
-}
-
-LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
-HEADING_RE = re.compile(r"^#{1,6}\s+(.*)$")
-
-
-def slug(texto: str) -> str:
-    """Slugificacion estilo GitHub (suficiente para nuestras anclas)."""
-    s = texto.strip().lower()
-    s = re.sub(r"[`*_]", "", s)
-    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
-    return re.sub(r"\s+", "-", s).strip("-")
+SPEC_LAYOUT = SCRIPTS / "check_spec_layout.py"
 
 
 class TestExpectedOutput(unittest.TestCase):
@@ -62,6 +46,7 @@ class TestExpectedOutput(unittest.TestCase):
             check=True, capture_output=True,
         )
         cls.inventory = json.loads((inter / "inventory.json").read_text(encoding="utf-8"))
+        cls.graph = json.loads((inter / "graph.json").read_text(encoding="utf-8"))
         cls.objects = [
             o
             for lst in cls.inventory["objects"].values()
@@ -81,22 +66,32 @@ class TestExpectedOutput(unittest.TestCase):
     def names_of(self, obj_type):
         return {o["name"] for o in self.objects if o["type"] == obj_type}
 
-    # --- 1. INVARIANTE ANCLA -------------------------------------------------
+    def run_gate(self, script, mode):
+        return subprocess.run(
+            [sys.executable, str(script), str(self.doc), "--mode", mode],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
 
-    def test_pasa_el_gate_de_rebuild(self):
+    # --- 1. INVARIANTES ANCLA: los gates reales, sin reimplementarlos --------
+
+    def test_pasa_el_gate_de_cobertura_rebuild(self):
         """Si `pantallas/` volviera a colgar de la raiz, in_spec_dir daria False
         y las interfaces saldrian en missing: este test lo caza solo."""
-        proc = subprocess.run(
-            [sys.executable, str(COVERAGE), str(self.doc), "--mode", "rebuild"],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-        )
+        proc = self.run_gate(COVERAGE, "rebuild")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
-    def test_pasa_el_gate_de_onboarding(self):
-        proc = subprocess.run(
-            [sys.executable, str(COVERAGE), str(self.doc), "--mode", "onboarding"],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-        )
+    def test_pasa_el_gate_de_cobertura_onboarding(self):
+        """La capa 10-especificacion cubre por si sola los 7 tipos requeridos por
+        el modo onboarding — SIN contar trazabilidad.md, que como catalogo de
+        todos los objetos hacia este test trivialmente verde."""
+        proc = self.run_gate(COVERAGE, "onboarding")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_pasa_el_gate_de_estructura(self):
+        """SKILL.md declara este gate 'validacion final, siempre'; la salida de
+        referencia tiene que ser la primera en cumplirlo. Cubre layout, enlaces,
+        anclas, secciones de plantilla e higiene."""
+        proc = self.run_gate(SPEC_LAYOUT, "rebuild")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
     # --- 2. Layout -----------------------------------------------------------
@@ -109,55 +104,11 @@ class TestExpectedOutput(unittest.TestCase):
         self.assertFalse((self.doc / "pantallas").exists())
         self.assertFalse((self.doc / "procesos").exists())
 
-    # --- 3. Integridad de enlaces --------------------------------------------
-
-    def test_enlaces_relativos_resuelven(self):
-        """`expected-output` solo contiene la capa 10-especificacion, asi que un
-        enlace a los documentos 00-09 no puede resolverse aqui — pero en una
-        ejecucion real si existe. Esos se validan contra el contrato de nombres
-        (asi un typo como `03-modelo-dato.md` sigue cayendo); el resto tiene que
-        existir en disco."""
-        rotos = []
-        for rel, texto in self.docs.items():
-            base = (self.doc / rel).parent
-            for destino in LINK_RE.findall(texto):
-                if destino.startswith(("http://", "https://", "#", "mailto:")):
-                    continue
-                ruta = destino.split("#")[0]
-                nombre = Path(ruta).name
-                if nombre in ONBOARDING_DOCS:
-                    continue
-                if not (base / ruta).resolve().exists():
-                    rotos.append(f"{rel} -> {destino}")
-        self.assertEqual(rotos, [], "Enlaces rotos:\n" + "\n".join(rotos))
-
-    # --- 4. Integridad de anclas ---------------------------------------------
-
-    def test_anclas_internas_existen(self):
-        anclas = {
-            rel: {slug(m.group(1)) for m in (HEADING_RE.match(l) for l in t.splitlines()) if m}
-            for rel, t in self.docs.items()
-        }
-        rotas = []
-        for rel, texto in self.docs.items():
-            base = (self.doc / rel).parent
-            for destino in LINK_RE.findall(texto):
-                if "#" not in destino or destino.startswith(("http", "mailto:")):
-                    continue
-                ruta, frag = destino.split("#", 1)
-                objetivo = rel if not ruta else (
-                    (base / ruta).resolve().relative_to(self.doc.resolve()).as_posix()
-                    if (base / ruta).resolve().exists() else None
-                )
-                if objetivo in anclas and slug(frag) not in anclas[objetivo]:
-                    rotas.append(f"{rel} -> {destino}")
-        self.assertEqual(rotas, [], "Anclas rotas:\n" + "\n".join(rotas))
-
-    # --- 5. Cobertura cruzada con el inventario ------------------------------
+    # --- 3. Cobertura cruzada con el inventario ------------------------------
 
     def test_una_ficha_por_interfaz(self):
         fichas = {
-            p.stem for p in (self.doc / "10-especificacion" / "pantallas").glob("*.md")
+            p.stem for p in (self.doc / "10-especificacion" / "pantallas").rglob("*.md")
             if p.stem != "indice"
         }
         self.assertEqual(fichas, self.names_of("interface"))
@@ -165,7 +116,7 @@ class TestExpectedOutput(unittest.TestCase):
     def test_una_ficha_de_nodos_por_process_model(self):
         fichas = {
             p.stem.replace("-nodos", "")
-            for p in (self.doc / "10-especificacion" / "procesos").glob("*-nodos.md")
+            for p in (self.doc / "10-especificacion" / "procesos").rglob("*-nodos.md")
         }
         self.assertEqual(fichas, self.names_of("processModel"))
 
@@ -183,7 +134,7 @@ class TestExpectedOutput(unittest.TestCase):
         for name in self.names_of("site"):
             self.assertIn(f"## site!{name}", nav)
 
-    # --- 6. Trazabilidad <-> inventario --------------------------------------
+    # --- 4. Trazabilidad <-> inventario --------------------------------------
 
     def test_trazabilidad_cubre_todo_el_inventario(self):
         texto = self.docs["10-especificacion/trazabilidad.md"]
@@ -206,7 +157,43 @@ class TestExpectedOutput(unittest.TestCase):
                 malas.append(linea)
         self.assertEqual(malas, [], "Filas sin estado valido:\n" + "\n".join(malas))
 
-    # --- 7. Alias prohibidos (M8 en forma generica) --------------------------
+    def test_estado_valido_rechaza_un_descartado_sin_motivo(self):
+        """La referencia no tiene ni una fila DESCARTADO, asi que el test de
+        arriba nunca llega a evaluar su rama: sin esto, la validacion del motivo
+        seria codigo muerto y podria romperse sin que nadie se enterase."""
+        mala = "| `DEMO_X` (interface) | — | — | — | DESCARTADO: |"
+        m = re.search(r"DESCARTADO\s*:\s*([^|]*)", mala)
+        self.assertFalse(bool(m and m.group(1).strip(" -—–\t")))
+        buena = "| `DEMO_X` (interface) | — | — | — | DESCARTADO: 0 callers |"
+        m = re.search(r"DESCARTADO\s*:\s*([^|]*)", buena)
+        self.assertTrue(bool(m and m.group(1).strip(" -—–\t")))
+
+    # --- 5. La referencia no puede afirmar lo que el grafo desmiente ---------
+
+    def test_los_callers_declarados_existen_como_arista(self):
+        """La ficha de `DEMO_CONS_ESTADOS` declaraba dos callers que no existen:
+        ningun objeto del fixture la referencia y `graph.json` la lista, con
+        razon, como huerfana. La salida de referencia no puede contradecir al
+        grafo del mismo fixture."""
+        aristas = {(e["from"], e["to"]) for e in self.graph["edges"]}
+        nombres = {o["name"] for o in self.objects}
+        texto = self.docs["10-especificacion/reglas-catalogo.md"]
+        actual = None
+        malos = []
+        for linea in texto.splitlines():
+            m = re.match(r"^#{2,4}\s+(?:rule|cons|decision)!(\S+)", linea.strip())
+            if m:
+                actual = m.group(1)
+                continue
+            if actual is None or "**Callers**" not in linea:
+                continue
+            segmento = linea.split("**Callers**")[1].split("·")[0]
+            for caller in re.findall(r"`([^`]+)`", segmento):
+                if caller in nombres and (caller, actual) not in aristas:
+                    malos.append(f"{actual}: declara caller `{caller}` sin arista en graph.json")
+        self.assertEqual(malos, [], "\n".join(malos))
+
+    # --- 6. Alias prohibidos (M8 en forma generica) --------------------------
 
     def test_no_se_cita_el_stem_del_fichero_como_nombre_de_objeto(self):
         """`DEMO_RT_Solicitud` es el nombre del FICHERO; el objeto se llama
@@ -221,36 +208,8 @@ class TestExpectedOutput(unittest.TestCase):
         for rel, texto in self.docs.items():
             for stem, real in alias.items():
                 for m in re.finditer(r"`([^`]+)`", texto):
-                    contenido = m.group(1)
-                    if contenido == stem:  # entre backticks y a secas
+                    if m.group(1) == stem:  # entre backticks y a secas
                         malos.append(f"{rel}: `{stem}` deberia ser `{real}`")
-        self.assertEqual(malos, [], "\n".join(malos))
-
-    # --- 8. Plantilla e higiene ---------------------------------------------
-
-    def test_fichas_de_pantalla_siguen_la_plantilla(self):
-        obligatorias = ("## Entradas", "## Componentes", "## Acciones",
-                        "## Criterios de reconstrucción")
-        for p in (self.doc / "10-especificacion" / "pantallas").glob("*.md"):
-            if p.stem == "indice":
-                continue
-            texto = p.read_text(encoding="utf-8")
-            for seccion in obligatorias:
-                self.assertIn(seccion, texto, f"{p.name} sin '{seccion}'")
-            criterios = re.search(
-                r"## Criterios de reconstrucción.*?(?=\n## |\Z)", texto, re.S
-            )
-            self.assertIsNotNone(criterios, p.name)
-            self.assertIn("- [ ]", criterios.group(0), f"{p.name} sin criterios verificables")
-
-    def test_sin_placeholders_sin_rellenar(self):
-        prohibidos = ("{{", "<TODO>", "lorem ipsum")
-        malos = [
-            f"{rel}: {t}"
-            for rel, texto in self.docs.items()
-            for t in prohibidos
-            if t in texto
-        ]
         self.assertEqual(malos, [], "\n".join(malos))
 
 

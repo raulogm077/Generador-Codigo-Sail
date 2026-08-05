@@ -479,7 +479,7 @@ def cmd_inventory(root: Path) -> dict[str, Any]:
 REF_PATTERNS = {
     "expressionRule": re.compile(r"rule!([A-Za-z0-9_]+)"),
     "constant": re.compile(r"cons!([A-Za-z0-9_]+)"),
-    "uuidRecordType": re.compile(r'urn:appian:record-type:v1:([0-9a-f\-]{36})'),
+    "uuidRecordType": re.compile(r'urn:appian:record-type:v1:([0-9a-fA-F\-]{36})'),
     "startProcess": re.compile(r"a!startProcess\s*\(\s*processModel\s*:\s*([A-Za-z0-9_!\{\}\-]+)"),
     "integrationCall": re.compile(r"a!integrationCall\s*\(\s*integration\s*:\s*([A-Za-z0-9_!\{\}\-]+)"),
     # Patrones documentados en analysis-workflow.md que faltaban:
@@ -490,6 +490,45 @@ REF_PATTERNS = {
     "memberOfGroup": re.compile(r"a!isUserMemberOfGroup\s*\([\s\S]{0,200}?groups?\s*:\s*(?:cons!)?([A-Za-z0-9_]+)"),
     "connectedSystemRef": re.compile(r"<(?:[\w.\-]+:)?connectedSystemRef>\s*([^<\s][^<]*?)\s*</(?:[\w.\-]+:)?connectedSystemRef>"),
 }
+
+# Referencias ESTRUCTURALES: no viajan en SAIL sino en tags/atributos del XML.
+# Sin ellas, objetos vivos salian huerfanos y `backlog-writer` los proponia como
+# DESCARTADO por "0 callers": el formulario principal de la app (form de start
+# event, de user task, vista del record y pagina del site) y la integracion con
+# el ERP (<integrationRef> en su nodo) eran los dos casos del fixture.
+#
+#   (tag, atributo o None para el texto, tipos candidatos, refType)
+STRUCT_REF_RULES = (
+    ("form", None, ("interface",), "form"),
+    ("formRef", None, ("interface",), "form"),
+    ("integrationRef", None, ("integration",), "integrationCall"),
+    ("assignees", None, ("group",), "assignment"),
+    ("assignee", None, ("group",), "assignment"),
+    ("view", "interface", ("interface",), "recordView"),
+    ("recordView", "interface", ("interface",), "recordView"),
+    ("action", "process", ("processModel",), "recordAction"),
+    ("recordAction", "process", ("processModel",), "recordAction"),
+    ("page", "objectUuid", ("recordType", "interface", "report"), "sitePage"),
+    ("sitePage", "objectUuid", ("recordType", "interface", "report"), "sitePage"),
+    ("visibilityGroup", None, ("group",), "security"),
+    ("entity", "cdt", ("cdt",), "entityCdt"),
+    ("variable", "type", ("cdt",), "variableType"),
+)
+
+# Aristas que representan INVOCACION (A ejecuta B). Solo estas cuentan para
+# detectar ciclos: en Appian es normal y sano que un record type tenga como
+# vista una interfaz que consulta ese mismo record, y reportarlo como ciclo
+# seria ruido en todas las apps.
+CYCLE_REF_TYPES = {"ruleRef", "startProcess", "subprocess", "recordAction", "form"}
+
+# Puntos de entrada: nada dentro del export los invoca, asi que grado entrante 0
+# es su estado NORMAL y no evidencia de objeto muerto. Los process models con
+# recurrencia (batches) se anaden en tiempo de ejecucion.
+ENTRY_POINT_TYPES = {"application", "site", "webApi", "portal"}
+
+# Umbral de acoplamiento fuerte (grado entrante). Documentado en
+# references/analysis-workflow.md — si cambia aqui, cambia alli.
+HUB_MIN_INDEGREE = 5
 
 
 def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
@@ -594,6 +633,45 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
                 target = name_index.get(("connectedSystem", tgt)) or uuid_index.get(tgt)
                 if target and target is not o:
                     add_edge(o, target, "connectedSystem")
+            # Referencias estructurales (tags/atributos, no SAIL).
+            elem = safe_parse(p)
+            if elem is None:
+                continue
+            for node in elem.iter():
+                tag = strip_ns(node.tag)
+                for rule_tag, attr, tipos, ref_type in STRUCT_REF_RULES:
+                    if tag != rule_tag:
+                        continue
+                    raw = get_attr_any(node, attr) if attr else (node.text or "")
+                    tgt = (raw or "").strip()
+                    if not tgt:
+                        continue
+                    target = uuid_index.get(tgt)
+                    if target is None:
+                        for cand in tipos:
+                            target = name_index.get((cand, tgt))
+                            if target is not None:
+                                break
+                    if target is not None and target is not o:
+                        add_edge(o, target, ref_type)
+            # Constantes TIPADAS: su <value> es el unico vinculo con el objeto al
+            # que apuntan (una constante de tipo Group es como SAIL referencia un
+            # grupo: no existe literal `group!X`).
+            if obj_type == "constant":
+                type_ref = (o.get("typeRef") or "").lower()
+                val = (o.get("value") or "").strip()
+                target, ref_type = None, None
+                if "data store" in type_ref:
+                    target = name_index.get(("dataStore", val.split(".")[0].strip()))
+                    ref_type = "dataStoreEntity"
+                elif "group" in type_ref:
+                    target = uuid_index.get(val) or name_index.get(("group", val))
+                    ref_type = "constGroup"
+                elif "document" in type_ref or "folder" in type_ref:
+                    target = uuid_index.get(val)
+                    ref_type = "constContent"
+                if target is not None and target is not o:
+                    add_edge(o, target, ref_type)
 
     group_by_name = {g["name"]: g for g in inventory.get("objects", {}).get("group", []) if g.get("name")}
     for g in inventory.get("objects", {}).get("group", []):
@@ -606,15 +684,34 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
     for e in edges:
         indegree[e["target"]] += 1
         outdegree[e["source"]] += 1
+
+    batch_ids = {
+        node_id(o)
+        for o in inventory.get("objects", {}).get("processModel", [])
+        if o.get("hasRecurrence") or (o.get("startType") or "") in {"timer", "recurrence"}
+    }
     orphans = [
         n["name"] or n["id"]
         for n in nodes
-        if indegree[n["id"]] == 0 and n["type"] not in {"application", "site"}
+        if indegree[n["id"]] == 0
+        and n["type"] not in ENTRY_POINT_TYPES
+        and n["id"] not in batch_ids
     ]
     hubs = sorted(
-        ({"id": n["id"], "name": n["name"], "type": n["type"], "in": indegree[n["id"]]} for n in nodes if indegree[n["id"]] >= 5),
+        (
+            {
+                "id": n["id"],
+                "name": n["name"],
+                "type": n["type"],
+                "in": indegree[n["id"]],
+                "out": outdegree[n["id"]],
+            }
+            for n in nodes
+            if indegree[n["id"]] >= HUB_MIN_INDEGREE
+        ),
         key=lambda x: -x["in"],
     )
+    cycles = find_cycles(nodes, [e for e in edges if e["refType"] in CYCLE_REF_TYPES])
     return {
         "nodes": nodes,
         "edges": edges,
@@ -623,13 +720,76 @@ def cmd_graph(root: Path, inventory: dict[str, Any]) -> dict[str, Any]:
             "edgeCount": len(edges),
             "orphanCount": len(orphans),
             "hubCount": len(hubs),
+            "cycleCount": len(cycles),
         },
         # orphans va COMPLETA a proposito: backlog-writer la usa como evidencia
         # de "objeto muerto" para justificar un DESCARTADO, y una lista truncada
         # afirmaria muerte sobre datos incompletos. hubs si es un top-N.
         "orphans": orphans,
         "hubs": hubs[:30],  # top-30 por indegree (deliberado)
+        "cycles": cycles,
     }
+
+
+def find_cycles(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> list[list[str]]:
+    """Componentes fuertemente conexas de tamano > 1 (Tarjan iterativo).
+
+    Un ciclo de invocacion (A llama a B que vuelve a llamar a A) es un riesgo de
+    recursion infinita y un obstaculo para reconstruir la app por capas: hay que
+    verlo antes de planificar el orden de construccion.
+    """
+    succ: dict[str, list[str]] = defaultdict(list)
+    for e in edges:
+        succ[e["source"]].append(e["target"])
+    name_of = {n["id"]: (n["name"] or n["id"]) for n in nodes}
+
+    index: dict[str, int] = {}
+    low: dict[str, int] = {}
+    on_stack: set[str] = set()
+    stack: list[str] = []
+    counter = 0
+    out: list[list[str]] = []
+
+    for raiz in [n["id"] for n in nodes]:
+        if raiz in index:
+            continue
+        # (nodo, iterador de sucesores) — pila explicita: un grafo de miles de
+        # objetos desbordaria la recursion de Python.
+        work: list[tuple[str, int]] = [(raiz, 0)]
+        index[raiz] = low[raiz] = counter
+        counter += 1
+        stack.append(raiz)
+        on_stack.add(raiz)
+        while work:
+            v, i = work[-1]
+            vecinos = succ.get(v, ())
+            if i < len(vecinos):
+                work[-1] = (v, i + 1)
+                w = vecinos[i]
+                if w not in index:
+                    index[w] = low[w] = counter
+                    counter += 1
+                    stack.append(w)
+                    on_stack.add(w)
+                    work.append((w, 0))
+                elif w in on_stack:
+                    low[v] = min(low[v], index[w])
+                continue
+            work.pop()
+            if work:
+                padre = work[-1][0]
+                low[padre] = min(low[padre], low[v])
+            if low[v] == index[v]:
+                comp = []
+                while True:
+                    w = stack.pop()
+                    on_stack.discard(w)
+                    comp.append(name_of.get(w, w))
+                    if w == v:
+                        break
+                if len(comp) > 1:
+                    out.append(sorted(comp))
+    return out
 
 
 def _to_bool(val: str | None) -> bool:
@@ -988,7 +1148,7 @@ def main(argv: list[str]) -> int:
         )
         print(f"Escritos: {out_dir / 'inventory.json'} y {out_dir / 'graph.json'}")
         print(f"Inventario: {inv['counts']}")
-        print(f"Grafo: nodos={graph['stats']['nodeCount']}, aristas={graph['stats']['edgeCount']}, huerfanos={graph['stats']['orphanCount']}, hubs={graph['stats']['hubCount']}")
+        print(f"Grafo: nodos={graph['stats']['nodeCount']}, aristas={graph['stats']['edgeCount']}, huerfanos={graph['stats']['orphanCount']}, hubs={graph['stats']['hubCount']}, ciclos={graph['stats']['cycleCount']}")
         return 0
     if args.detail:
         inv = cmd_inventory(root)

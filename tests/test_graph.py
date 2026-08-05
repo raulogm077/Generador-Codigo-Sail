@@ -95,19 +95,95 @@ class TestGraph(unittest.TestCase):
         )
 
     def test_member_of_group_edge(self):
+        """La cadena real de Appian: el SAIL no puede nombrar un grupo, asi que
+        `a!isUserMemberOfGroup` apunta a una CONSTANTE de tipo Group y es esa
+        constante la que resuelve al grupo. Antes el fixture escribia
+        `cons!DEMO_GRP_Aprobadores` — un nombre de grupo tras el prefijo de
+        constante — y la arista salia del fallback por nombre, no del patron."""
         self.assertIn(
-            ("DEMO_PM_ReintentarEnvios", "DEMO_GRP_Aprobadores", "security"),
+            ("DEMO_PM_ReintentarEnvios", "DEMO_CONS_GRP_APROBADORES", "security"),
             self.edges_with_type(),
         )
-
-    def test_site_record_list_edge(self):
-        self.assertIn(("DEMO_SITE_Solicitudes", "DEMO Solicitud"), self.edges())
+        self.assertIn(
+            ("DEMO_CONS_GRP_APROBADORES", "DEMO_GRP_Aprobadores", "constGroup"),
+            self.edges_with_type(),
+        )
 
     def test_pm_invocado_como_subproceso_ya_no_es_huerfano(self):
         self.assertNotIn("DEMO_PM_AprobarSolicitud", self.graph["orphans"])
 
     def test_grupo_referenciado_ya_no_es_huerfano(self):
         self.assertNotIn("DEMO_GRP_Aprobadores", self.graph["orphans"])
+
+    # --- Referencias ESTRUCTURALES (auditoria B7) -------------------------
+    # Todas viajan en tags/atributos del XML, no en SAIL. Sin ellas el grafo
+    # daba por muertos objetos vivos y backlog-writer los proponia como
+    # DESCARTADO: el formulario principal de la app y la integracion con el ERP.
+
+    def test_site_page_apunta_al_record_type(self):
+        """La arista sale del `objectUuid` de la pagina. Antes salia del URN que
+        el fixture llevaba escrito en la prosa del <description>: un export real
+        no lo lleva y el site no generaba ni una arista."""
+        self.assertIn(
+            ("DEMO_SITE_Solicitudes", "DEMO Solicitud", "sitePage"),
+            self.edges_with_type(),
+        )
+
+    def test_site_page_apunta_a_la_interfaz(self):
+        self.assertIn(
+            ("DEMO_SITE_Solicitudes", "DEMO_IFC_SolicitudForm", "sitePage"),
+            self.edges_with_type(),
+        )
+
+    def test_form_de_process_model_apunta_a_la_interfaz(self):
+        self.assertIn(
+            ("DEMO_PM_AprobarSolicitud", "DEMO_IFC_SolicitudForm", "form"),
+            self.edges_with_type(),
+        )
+
+    def test_integration_ref_de_nodo_apunta_a_la_integracion(self):
+        self.assertIn(
+            ("DEMO_PM_AprobarSolicitud", "DEMO_INT_EnviarERP", "integrationCall"),
+            self.edges_with_type(),
+        )
+
+    def test_record_view_y_record_action(self):
+        self.assertIn(
+            ("DEMO Solicitud", "DEMO_IFC_SolicitudForm", "recordView"),
+            self.edges_with_type(),
+        )
+        self.assertIn(
+            ("DEMO Solicitud", "DEMO_PM_AprobarSolicitud", "recordAction"),
+            self.edges_with_type(),
+        )
+
+    def test_constante_de_entidad_apunta_a_su_data_store(self):
+        self.assertIn(
+            ("DEMO_CONS_ENTITY_SOLICITUD", "DEMO_DS_Principal", "dataStoreEntity"),
+            self.edges_with_type(),
+        )
+
+    def test_el_formulario_principal_no_es_huerfano(self):
+        """El caso que mas dolia: pagina de site, form de start event, form de
+        user task y vista del record type — y aun asi salia en `orphans`."""
+        self.assertNotIn("DEMO_IFC_SolicitudForm", self.graph["orphans"])
+
+    def test_la_integracion_no_es_huerfana(self):
+        self.assertNotIn("DEMO_INT_EnviarERP", self.graph["orphans"])
+
+    def test_solo_queda_huerfano_lo_que_de_verdad_no_se_usa(self):
+        """DEMO_CONS_ESTADOS no la referencia nadie en el fixture (el gateway
+        compara contra un literal). El resto de objetos SI tienen caller."""
+        self.assertEqual(self.graph["orphans"], ["DEMO_CONS_ESTADOS"])
+
+    def test_batch_no_cuenta_como_huerfano(self):
+        """Un PM con recurrencia lo dispara el planificador, no otro objeto:
+        grado entrante 0 es su estado normal."""
+        self.assertNotIn("DEMO_PM_ReintentarEnvios", self.graph["orphans"])
+
+    def test_el_fixture_no_tiene_ciclos_de_invocacion(self):
+        self.assertEqual(self.graph["cycles"], [])
+        self.assertEqual(self.graph["stats"]["cycleCount"], 0)
 
 
 class TestParserRobustness(unittest.TestCase):
@@ -149,6 +225,36 @@ class TestParserRobustness(unittest.TestCase):
         graph = self.mod.cmd_graph(Path("."), inventory)
         self.assertEqual(graph["stats"]["orphanCount"], 60)
         self.assertEqual(len(graph["orphans"]), 60)
+
+    # --- Deteccion de ciclos (la prometia analysis-workflow.md y no existia) ---
+
+    def _nodos(self, *nombres):
+        return [{"id": n.lower(), "name": n, "type": "expressionRule"} for n in nombres]
+
+    def _aristas(self, *pares):
+        return [{"source": a.lower(), "target": b.lower(), "refType": "ruleRef"}
+                for a, b in pares]
+
+    def test_find_cycles_detecta_el_ciclo(self):
+        ciclos = self.mod.find_cycles(
+            self._nodos("A", "B", "C"),
+            self._aristas(("A", "B"), ("B", "A"), ("B", "C")),
+        )
+        self.assertEqual(ciclos, [["A", "B"]])
+
+    def test_find_cycles_no_inventa_ciclos_en_un_arbol(self):
+        ciclos = self.mod.find_cycles(
+            self._nodos("A", "B", "C", "D"),
+            self._aristas(("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")),
+        )
+        self.assertEqual(ciclos, [])
+
+    def test_find_cycles_aguanta_una_cadena_larga(self):
+        """Pila explicita, no recursion: 5000 objetos encadenados desbordarian
+        el limite de Python y el script moriria en apps grandes."""
+        nombres = [f"N{i}" for i in range(5000)]
+        pares = [(nombres[i], nombres[i + 1]) for i in range(len(nombres) - 1)]
+        self.assertEqual(self.mod.find_cycles(self._nodos(*nombres), self._aristas(*pares)), [])
 
 
 class TestNewRefPatterns(unittest.TestCase):

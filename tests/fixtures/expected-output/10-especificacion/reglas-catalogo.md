@@ -8,7 +8,7 @@
 
 > Una ficha por CADA expression rule y CADA decision del inventario. Sin filtro de callers.
 
-Cobertura: 3/3 (2 expression rules + 1 decision de `inventory.json`).
+Cobertura: 3/3 reglas (2 expression rules + 1 decision) y 3/3 constantes de `inventory.json`.
 
 ## Expression rules
 
@@ -76,10 +76,17 @@ if(
 ## Constantes
 
 ### cons!DEMO_CONS_ESTADOS
-**Tipo**: Text · **Callers**: `DEMO_PM_AprobarSolicitud` (gateway), `DEMO_IFC_SolicitudForm` (showWhen) · **Evidencia**: `content/DEMO_CONS_ESTADOS.xml#value`
+**Tipo**: Text · **Callers**: ninguno — huérfana en `graph.json` (🟡, ver nota) · **Evidencia**: `content/DEMO_CONS_ESTADOS.xml#value`
 **Valor**: `BORRADOR;ENVIADO;APROBADO;RECHAZADO`
 **Para qué sirve**: dominio cerrado del campo `estado` de una solicitud. Es la fuente de verdad de los cuatro estados del ciclo de vida.
 **Nota de reconstrucción**: los valores viajan separados por `;` en una sola constant de tipo Text (no es una lista tipada). Ver la máquina de estados completa en [estados.md](estados.md).
+**🟡 Pendiente de validación**: ningún objeto del export la referencia — el gateway del PM compara contra el literal `"RESPONSABLE"` y el script escribe `"APROBADO"` a pelo, sin pasar por la constant. **No se descarta**: el dominio que declara coincide con el campo `estado` del record type y con los literales escritos en el proceso, así que o la usa un objeto no exportado o la app tiene los estados duplicados en literales (deuda técnica a confirmar con el equipo). Responsable sugerido: técnico Appian.
+
+### cons!DEMO_CONS_GRP_APROBADORES
+**Tipo**: Group · **Callers**: `DEMO_PM_ReintentarEnvios` (gateway `b2`, `a!isUserMemberOfGroup`) · **Evidencia**: `content/DEMO_CONS_GRP_APROBADORES.xml#value`
+**Valor**: `DEMO_GRP_Aprobadores`
+**Para qué sirve**: es la referencia al grupo de aprobadores desde SAIL. En Appian no existe literal `group!X`, así que un grupo solo se puede nombrar en una expresión a través de una constante como esta.
+**Nota de reconstrucción**: al reconstruir hay que crear **primero** el grupo y **después** la constante que lo apunta; si se invierte el orden la constante queda sin valor y el gateway del batch evalúa siempre a falso (nadie pasa el control de autorización) sin dar error.
 
 ### cons!DEMO_CONS_ENTITY_SOLICITUD
 **Tipo**: Data Store Entity · **Callers**: `DEMO_PM_ReintentarEnvios` (nodos `b1` queryEntity y `b4` writeToDataStoreEntity) · **Evidencia**: `content/DEMO_CONS_ENTITY_SOLICITUD.xml#value`

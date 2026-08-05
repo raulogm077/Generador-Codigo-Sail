@@ -79,8 +79,12 @@ Rellena `trazabilidad-template.md` con **una fila por CADA objeto de inventory.j
 | Estado | `DOCUMENTADO` o `DESCARTADO: {motivo}` — **nada más** |
 
 - `DESCARTADO` exige motivo no vacío **con evidencia** (p. ej. `objeto muerto: 0 callers en graph.json y sin trigger propio — Evidencia: _intermedio/graph.json#orphans`). Sin evidencia de muerte, el objeto se documenta.
-- La lista `orphans` de `graph.json` es **completa** (no truncada). Compruébalo antes de usarla como evidencia: `len(orphans)` debe coincidir con `stats.orphanCount`; si no coincide, no afirmes muerte de nada y marca 🟡. Ojo: `hubs` sí es un top-30 por diseño.
-- Ser huérfano **no basta** para descartar: un site, una web API o un batch son entry points legítimos sin callers entrantes. Cruza siempre con el tipo de objeto antes de declararlo muerto.
+- La lista `orphans` de `graph.json` es **completa** (no truncada); `hubs` sí es un top-30 por diseño.
+- **Ser huérfano NO basta para descartar.** `orphans` es "el parser no encontró quién lo llama", no "nadie lo llama": el grafo se construye con patrones, y una referencia que no esté cubierta (SAIL generado dinámicamente, plugin de terceros, llamada desde un objeto no exportado) deja vivo a un objeto marcándolo huérfano. Antes de escribir `DESCARTADO` sobre un huérfano, comprueba las tres cosas:
+  1. **No es un entry point.** `application`, `site`, `webApi` y los process models con recurrencia (batches) ya se excluyen de la lista; si aparece un `portal` o algo disparado desde fuera de Appian, tampoco cuenta.
+  2. **No aparece por nombre en ningún XML del export.** `grep -rn "{nombre}" <export>` (o su UUID). Si sale en algún sitio que no sea su propia definición, **está vivo**: repórtalo como referencia no cubierta por el grafo y márcalo 🟡 en vez de descartarlo.
+  3. **Su ausencia es coherente con lo que hace.** Una interfaz sin caller, una integración sin llamador o una rule de validación sin invocación son sospechosas de referencia no detectada; una constante de configuración que sustituyó otra sí puede estar muerta de verdad.
+- La evidencia del `DESCARTADO` debe citar el grep además del grafo. Ejemplo válido: `objeto muerto: 0 callers en graph.json y 0 apariciones fuera de su definición — Evidencia: _intermedio/graph.json#orphans + grep DEMO_CONS_VIEJA`.
 - Celda sin correspondencia = `—`, nunca vacía (una application o un grupo no tienen ficha propia de pantalla: `—` en la 4ª columna y DOCUMENTADO igualmente — su documentación vive en 00-09).
 - Cierra con `**Cobertura**: N/N objetos (100%)` usando el N del Paso 1.
 
@@ -92,7 +96,21 @@ Ejecuta:
 python scripts/check_coverage.py <ruta_salida> --mode rebuild
 ```
 
-Exit 0 obligatorio. Si sale 1, mira `missing` en `_intermedio/coverage.json`. Trampa conocida: para interfaces, rules, decisions, constants y sites el gate solo cuenta apariciones **dentro de `10-especificacion/` excluyendo `trazabilidad.md`** — estar en la matriz como DOCUMENTADO no basta. Arreglo correcto por orden de preferencia: (1) el objeto debía tener ficha y falta → repórtalo al orquestador (hueco de Task 7/8, no lo tapes tú); (2) el objeto participa en una historia → asegúrate de que "Objetos que la implementan hoy" usa su nombre técnico exacto (backlog.md SÍ cuenta como spec); (3) el objeto está muerto con evidencia → `DESCARTADO: {motivo}` en la matriz. Re-ejecuta hasta exit 0.
+Exit 0 obligatorio. Si sale 1, mira `missing` en `_intermedio/coverage.json`.
+
+**Trampa conocida**: para interfaces, rules, decisions, constants y sites el gate exige **ficha propia**, y la reconoce por su forma exacta:
+
+| Tipo | Qué acepta el gate |
+|---|---|
+| interface | fichero `10-especificacion/pantallas/{nombre}.md` (o su `# H1` nombrándola) |
+| expressionRule | cabecera `### rule!{nombre}` |
+| decision | cabecera `### decision!{nombre}` |
+| constant | cabecera `### cons!{nombre}` |
+| site | cabecera `## site!{nombre}` |
+
+Nada más cuenta: **ni** una fila `DOCUMENTADO` en tu matriz, **ni** una mención en `backlog.md`, **ni** una cabecera que lo nombre sin el prefijo tipado (`## Constantes usadas: X`). Es deliberado — las fichas se citan entre sí, y aceptar menciones convertía el gate en un trámite.
+
+Arreglo correcto por orden de preferencia: (1) el objeto debía tener ficha y falta → **repórtalo al orquestador** (es un hueco de Task 7/8, no lo tapes tú escribiendo la ficha desde el backlog); (2) la ficha existe pero con otro nombre o fuera de su carpeta → corrige la ubicación; (3) el objeto está muerto con evidencia → `DESCARTADO: {motivo}` en la matriz, con los tres controles del Paso 5. Re-ejecuta hasta exit 0.
 
 ## Salida
 

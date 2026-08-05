@@ -2,12 +2,14 @@
 
 ## `fixtures/mini-export/` — export Appian sintético
 
-Export mínimo en formato *Haul* real (**18 objetos, 18 ficheros**) usado por todos los tests
+Export mínimo en formato *Haul* real (**19 objetos, 19 ficheros**) usado por todos los tests
 de la skill `appian-reverse-engineering`. **100% sintético**: nombres `DEMO_*`, UUIDs
 `00000000-0000-0000-0000-0000000000NN`. Cero datos reales.
 
-Grafo resultante: **18 nodos · 14 aristas · 7 huérfanos** (los huérfanos son entry points
-legítimos: application, site, web API, batch…).
+Grafo resultante: **19 nodos · 27 aristas · 1 huérfano · 0 ciclos**. El único huérfano es
+`DEMO_CONS_ESTADOS`, y lo es de verdad: nadie la referencia (el gateway del PM compara
+contra un literal). Los entry points — application, site, web API y el batch — se excluyen
+de `orphans` por tipo, no por casualidad.
 
 | Objeto | Fichero | Papel en los tests |
 |---|---|---|
@@ -23,7 +25,8 @@ legítimos: application, site, web API, batch…).
 | Record Type + CDT + Data Store | `recordType/…`, `datatype/…`, `dataStore/…` | el data store se inventaría desde la Task 3 (`test_detail.py::test_datastore_inventoried`) |
 | Constant `DEMO_CONS_ENTITY_SOLICITUD` | `content/…` | entidad de data store: sin ella, `a!queryEntity`/`a!writeToDataStoreEntity` no resolverían contra nada y no habría arista |
 | PM `DEMO_PM_ReintentarEnvios` | `processModel/…` | batch nocturno **con prefijo de namespace a propósito** (regresión de M6). Hospeda 5 patrones sin cobertura previa: `a!queryEntity`, `a!writeToDataStoreEntity`, `a!writeRecords`, `<a:processModelUuid>` (subproceso) y `a!isUserMemberOfGroup` |
-| Site `DEMO_SITE_Solicitudes` | `site/…` | 2 páginas (RECORD_LIST + INTERFACE). `siteHaul` no tenía cobertura y `site` es un tipo requerido en modo rebuild |
+| Site `DEMO_SITE_Solicitudes` | `site/…` | 2 páginas (RECORD_LIST + INTERFACE) con `objectUuid`: de ahí salen las aristas del site. `siteHaul` no tenía cobertura y `site` es un tipo requerido en modo rebuild |
+| Constant `DEMO_CONS_GRP_APROBADORES` | `content/…` | constante de tipo **Group**: en Appian no hay literal `group!X`, así que es la única forma de nombrar un grupo desde SAIL. Cubre la cadena `PM → constante → grupo` |
 
 > ⚠️ Al tocar el PM namespaced: el `xmlns:a` **debe** estar declarado en la raíz o
 > `ET.parse` falla, `safe_parse` devuelve `None` y el objeto desaparece del inventario

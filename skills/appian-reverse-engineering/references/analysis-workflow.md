@@ -100,6 +100,20 @@ Antes de generar nada: preguntar formatos de salida y, si el objetivo huele a re
 | `a!integrationCall(integration: ` | Llamada a integration |
 | `a!isUserMemberOfGroup(…)` | Check de seguridad |
 
+Y las **referencias estructurales**, que no viajan en SAIL sino en tags y atributos del XML — sin ellas el formulario principal de una app puede salir huérfano pese a estar en un site, en un start event y en una vista de record:
+
+| Patrón | Significa |
+|---|---|
+| `<form>` / `<formRef>` en un nodo | Process model → interfaz (start form o formulario de tarea) |
+| `<integrationRef>` en un nodo | Process model → integration |
+| `<assignees>` / `<assignee>` | Tarea humana → grupo |
+| `<view interface="…">` | Record type → interfaz (record view) |
+| `<action process="…">` | Record type → process model (related action) |
+| `<page objectUuid="…">` | Site → record type / interfaz que expone |
+| `<visibilityGroup>` | Site → grupo con acceso |
+| `<entity cdt="…">` | Data store → CDT |
+| Constante de tipo *Data Store Entity* | Su valor `{dataStore}.{entidad}` la vincula a su data store |
+
 Los tags XML se reconocen **con o sin prefijo de namespace** (`<a:processModelUuid>` también casa).
 
 **Resolución de referencias** contra el inventario:
@@ -107,14 +121,14 @@ Los tags XML se reconocen **con o sin prefijo de namespace** (`<a:processModelUu
 - Referenciado pero NO existe → dependencia faltante en el export, marcar 🔴.
 - En el inventario pero NO referenciado por nadie → candidato a **huérfano**, marcar 🟡 para `09-valor-adicional.md`.
 
-**Detección automática**:
+**Detección automática** (lo que `cmd_graph` calcula de verdad; si cambias los umbrales en el script, cámbialos aquí):
 - **Subprocesos vs procesos raíz**: un PM es raíz si no es `target` de ninguna arista `startProcess` ni subproceso de otro PM.
-- **Batches**: PM con start event `<recurrence>` o `<timerEvent>`.
-- **Objetos huérfanos**: nodos sin aristas entrantes, excepto puntos de entrada conocidos (sites, web APIs, batches, application).
-- **Acoplamientos fuertes**: nodos con grado entrante o saliente >10.
-- **Ciclos**: ciclos en el grafo de invocación entre process models.
+- **Batches**: PM con start event `<recurrence>` o `<timerEvent>` (`hasRecurrence` en el inventario).
+- **Objetos huérfanos**: nodos con grado entrante 0, excluyendo los tipos que son puntos de entrada por naturaleza (`application`, `site`, `webApi`, `portal`) y los process models con recurrencia.
+- **Acoplamientos fuertes** (`hubs`): grado entrante **≥ 5** (`HUB_MIN_INDEGREE`). Cada hub trae también su grado saliente (`out`).
+- **Ciclos** (`cycles`): componentes fuertemente conexas del subgrafo de **invocación** (`ruleRef`, `startProcess`, `subprocess`, `recordAction`, `form`). Las aristas de datos y estructura se excluyen a propósito: que un record type tenga como vista una interfaz que consulta ese mismo record es normal en Appian, no un ciclo.
 
-**Cómo leer la salida**: `orphans` es la lista **completa** (contrástala con `stats.orphanCount`); `hubs` es un **top-30** por grado entrante, por diseño.
+**Cómo leer la salida**: `orphans` es la lista **completa**; `hubs` es un **top-30** por grado entrante, por diseño. Huérfano significa *"el parser no encontró quién lo llama"*, no *"nadie lo llama"* — antes de declarar muerto un objeto, cruza con un `grep` de su nombre en el export (ver `agents/backlog-writer.md`).
 
 ---
 

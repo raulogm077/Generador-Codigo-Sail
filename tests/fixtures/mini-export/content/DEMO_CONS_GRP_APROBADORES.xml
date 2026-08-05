@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Constante de tipo Group. En Appian NO existe literal `group!X`: los grupos se
+     referencian desde SAIL a traves de una constante como esta, asi que sin ella
+     el `cons!DEMO_GRP_Aprobadores` del batch no compilaria. -->
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000087</versionUuid>
+  <constant name="DEMO_CONS_GRP_APROBADORES" uuid="00000000-0000-0000-0000-000000000018">
+    <description>Grupo autorizado a ejecutar el reintento nocturno y a aprobar solicitudes.</description>
+    <typeRef>Group</typeRef>
+    <value>DEMO_GRP_Aprobadores</value>
+  </constant>
+</contentHaul>
