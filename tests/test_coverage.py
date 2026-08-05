@@ -339,6 +339,105 @@ class CoverageTestCase(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(coverage["missing"], {})
 
+    def test_rebuild_ficha_con_cabecera_h3_cuenta(self):
+        """M7: las fichas del catalogo cuelgan de `###` bajo su seccion `##`.
+        Fija que has_own_sheet acepta cualquier nivel: si alguien 'optimiza'
+        el startswith('#') a '## ', este test lo caza."""
+        doc = self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "expressionRule": [obj("expressionRule", "DEMO_VAL_Importe", UUID_IFC)],
+            },
+            {
+                "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+                "10-especificacion/reglas-catalogo.md": (
+                    "# Catalogo\n\n## Expression rules\n\n"
+                    "### rule!DEMO_VAL_Importe\n**Firma**: importe -> Text\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(coverage["missing"], {})
+
+    # --- I2: constants y sites tambien exigen ficha propia ---
+
+    def _doc_con_constant_y_site(self, docs):
+        return self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "constant": [obj("constant", "DEMO_CONS_ESTADOS", UUID_IFC)],
+                "site": [obj("site", "DEMO_SITE_Solicitudes", UUID_IFC_2)],
+            },
+            docs,
+        )
+
+    def test_rebuild_constant_y_site_con_ficha_exit_0(self):
+        doc = self._doc_con_constant_y_site({
+            "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+            "10-especificacion/reglas-catalogo.md": (
+                "# Catalogo\n\n## Constantes\n\n"
+                "### cons!DEMO_CONS_ESTADOS\n**Valor**: `BORRADOR;ENVIADO`\n"
+            ),
+            "10-especificacion/navegacion.md": (
+                "# Navegacion\n\n## site!DEMO_SITE_Solicitudes\n**URL stub**: `/demo`\n"
+            ),
+        })
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(coverage["missing"], {})
+
+    def test_rebuild_constant_solo_mencionada_no_basta(self):
+        """EL DISCRIMINANTE: citar la constant dentro de la spec (en la tabla de
+        dominio de estados.md) ya no cuenta como ficha."""
+        doc = self._doc_con_constant_y_site({
+            "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+            "10-especificacion/estados.md": (
+                "# Estados\n\nDominio tomado de `DEMO_CONS_ESTADOS`: BORRADOR, ENVIADO.\n"
+            ),
+            "10-especificacion/navegacion.md": (
+                "# Navegacion\n\n## site!DEMO_SITE_Solicitudes\n"
+            ),
+        })
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_CONS_ESTADOS", coverage["missing"].get("constant", []))
+
+    def test_rebuild_constant_solo_en_00_09_no_basta(self):
+        """Citarla en los documentos de onboarding tampoco: la spec es su scope."""
+        doc = self._doc_con_constant_y_site({
+            "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+            "09-valor-adicional.md": "Constante `DEMO_CONS_ESTADOS` con los estados.\n",
+            "10-especificacion/navegacion.md": (
+                "# Navegacion\n\n## site!DEMO_SITE_Solicitudes\n"
+            ),
+        })
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_CONS_ESTADOS", coverage["missing"].get("constant", []))
+
+    def test_rebuild_site_sin_ficha_exit_1(self):
+        doc = self._doc_con_constant_y_site({
+            "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+            "10-especificacion/reglas-catalogo.md": (
+                "# Catalogo\n\n## Constantes\n\n### cons!DEMO_CONS_ESTADOS\n"
+            ),
+            "10-especificacion/pantallas/indice.md": (
+                "# Indice\n\nAccesible desde `DEMO_SITE_Solicitudes`.\n"
+            ),
+        })
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_SITE_Solicitudes", coverage["missing"].get("site", []))
+
+    def test_onboarding_no_exige_ficha_a_constant_ni_site(self):
+        """El modo por defecto no cambia: constants y sites son informativos."""
+        doc = self._doc_con_constant_y_site({
+            "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+        })
+        proc, _ = self.run_gate(doc, "onboarding")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
     def test_rebuild_descartado_en_trazabilidad_cuenta(self):
         """Una rule muerta marcada `DESCARTADO: {motivo}` cuenta como cubierta."""
         doc = self.make_doc(

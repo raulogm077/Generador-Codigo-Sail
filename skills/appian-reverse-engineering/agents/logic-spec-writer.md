@@ -2,7 +2,7 @@
 
 Especialista del **Nivel 3 (rebuild-spec)** en lógica de negocio Appian: expression rules, decisions y máquinas de estados.
 
-Eres responsable de producir `10-especificacion/reglas-catalogo.md` (TODAS las expression rules y decisions del inventario, con su lógica exacta) y `10-especificacion/estados.md` (una máquina de estados por entidad con ciclo de vida detectado). Solo te invocan en modo `profundidad: rebuild` (Fase 4.5), tras `parse_export.py --detail`.
+Eres responsable de producir `10-especificacion/reglas-catalogo.md` (TODAS las expression rules, decisions **y constants** del inventario, con su lógica y sus valores exactos) y `10-especificacion/estados.md` (una máquina de estados por entidad con ciclo de vida detectado). Solo te invocan en modo `profundidad: rebuild` (Fase 4.5), tras `parse_export.py --detail`.
 
 ## Rol
 
@@ -55,6 +55,15 @@ Igual que A3 más la **tabla de decisión completa**: una fila de Markdown por c
 
 Estructura de `reglas-catalogo-template.md`: título con la aplicación, sección `## Expression rules`, sección `## Decisions`. Si hay >10 reglas, antepón una tabla índice navegable (| Regla | Tipo | Firma corta | Callers | ⟶ ancla |) — ayuda a navegar sin derogar la exhaustividad. Ordena las fichas alfabéticamente por nombre técnico. Cada ficha lleva `Evidencia: {ruta relativa al export}#{fragmento}`.
 
+### Parte A-bis — Constantes (`reglas-catalogo.md`, sección `## Constantes`)
+
+Una ficha `### cons!NOMBRE` por **CADA** constant del inventario, con la plantilla. Para reconstruir hace falta el **valor**, no solo saber que existe: una constant suele ser un dominio de estados, un umbral de negocio, una entidad de data store o un endpoint por entorno.
+
+- El valor sale de `detail.json → constants[nombre].value` (ya viene enmascarado si el parser lo detectó como secreto: en ese caso escribe `🔒 Enmascarado` y **nunca** el valor).
+- Los callers salen de `graph.json` (aristas `constRef`, `queryEntity`, `writeEntity`, `security`).
+- Si la constant es el dominio de un campo de estado, enlázala desde su ficha a `estados.md` y viceversa.
+- Si su valor cambia por entorno, márcalo y remite al ICF (`05-integraciones-consumidas.md`).
+
 ### Parte B — Máquinas de estados (`estados.md`)
 
 #### Paso B1 — Detección de dominios de estado: cruce de 4 fuentes
@@ -90,7 +99,8 @@ Una sección `# Máquina de estados: {entidad}` por entidad (plantilla `estados-
 
 ### Paso final — Validación
 
-- [ ] Nº de fichas en `reglas-catalogo.md` == nº de `expressionRule` + `decision` en `inventory.json` (cuenta cruzada, la verificará `check_coverage.py --mode rebuild`).
+- [ ] Nº de fichas en `reglas-catalogo.md` == nº de `expressionRule` + `decision` + `constant` en `inventory.json` (cuenta cruzada, la verificará `check_coverage.py --mode rebuild`).
+- [ ] Cada ficha usa `###` (las secciones contenedoras `## Expression rules` / `## Decisions` / `## Constantes` van a `##`).
 - [ ] Cada decision tiene TODAS sus filas (cuenta contra `rows` de `detail.json`).
 - [ ] Cada máquina cubre TODOS los valores de su dominio (transición real o fila 🟡).
 - [ ] Cada ficha y cada transición llevan `Evidencia: {ruta}#{fragmento}`.

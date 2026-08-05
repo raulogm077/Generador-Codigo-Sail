@@ -2,7 +2,7 @@
 
 Especialista en **fichas de pantalla exhaustivas** para el Nivel 3 (`profundidad: rebuild`). Solo se invoca en la Fase 4.5.
 
-Eres responsable de producir `10-especificacion/pantallas/{interfaz}.md` — **una ficha por CADA interfaz** del `inventory.json`, sin excepciones — y `10-especificacion/pantallas/indice.md` con la tabla resumen. Tu salida es la especificación con la que un equipo reconstruye cada pantalla desde cero **sin abrir el export**.
+Eres responsable de producir `10-especificacion/pantallas/{interfaz}.md` — **una ficha por CADA interfaz** del `inventory.json`, sin excepciones —, `10-especificacion/pantallas/indice.md` con la tabla resumen y `10-especificacion/navegacion.md` (una ficha `## site!NOMBRE` por CADA site: sin ese documento la reconstrucción tendría todas las pantallas pero no sabría cómo se llega a ellas). Tu salida es la especificación con la que un equipo reconstruye cada pantalla desde cero **sin abrir el export**.
 
 ## Rol
 
@@ -77,6 +77,7 @@ Solo la invocación con `consolidar_indice: sí` (la última del orquestador, o 
 ### Paso 7 — Validación final (checklist de salida)
 
 - [ ] nº de fichas en `pantallas/` == nº de interfaces en `inventory.json` (cuenta cruzada; en invocación por lotes, nº de fichas del lote == tamaño del lote).
+- [ ] `navegacion.md` tiene una ficha `## site!X` por CADA site del inventario, con TODAS sus páginas y su objeto destino (plantilla `navegacion-template.md`). Lo verifica `check_coverage.py --mode rebuild`.
 - [ ] Cada ficha tiene TODAS las secciones de la plantilla (con `N/A — motivo` donde aplique).
 - [ ] Cada ficha tiene ≥1 criterio de reconstrucción verificable.
 - [ ] Cada predicado de las columnas "Validaciones" y "Visible/editable cuando" es SAIL literal copiado del `detail.json` (no paráfrasis).
@@ -88,6 +89,7 @@ Solo la invocación con `consolidar_indice: sí` (la última del orquestador, o 
 
 - `<ruta_salida>/10-especificacion/pantallas/{interfaz}.md` — una por interfaz del lote.
 - `<ruta_salida>/10-especificacion/pantallas/indice.md` — solo con `consolidar_indice: sí`.
+- `<ruta_salida>/10-especificacion/navegacion.md` — solo con `consolidar_indice: sí` (necesita ver todas las fichas para enlazarlas).
 
 ## Anti-patrones (no hagas esto)
 

@@ -61,15 +61,18 @@ REBUILD_EXTRA = (
     "site",
 )
 
-# De los tipos que exige `rebuild`, estos son artefactos con logica que hay que
-# reconstruir: no basta con citarlos, necesitan FICHA PROPIA (fichero dedicado o
-# cabecera Markdown). Los demas de REBUILD_EXTRA (constant, site) son valores o
-# contenedores: basta con que aparezcan dentro de `10-especificacion/`.
-SHEET_REQUIRED = (
-    "interface",
-    "expressionRule",
-    "decision",
-)
+# En modo `rebuild` TODOS los tipos de REBUILD_EXTRA necesitan FICHA PROPIA
+# (fichero dedicado o cabecera Markdown): una mencion de pasada no basta, porque
+# las fichas se citan entre si (el indice las lista, una pantalla nombra las
+# reglas que invoca) y eso convertia el gate en un tramite.
+#
+# Donde vive la ficha de cada tipo:
+#   interface      -> 10-especificacion/pantallas/{interfaz}.md
+#   expressionRule -> ### rule!X     en reglas-catalogo.md
+#   decision       -> ### decision!X en reglas-catalogo.md
+#   constant       -> ### cons!X     en reglas-catalogo.md  (seccion Constantes)
+#   site           -> ## site!X      en navegacion.md
+SHEET_REQUIRED = REBUILD_EXTRA
 
 SPEC_DIR_NAME = "10-especificacion"
 TRAZA_FILE_NAME = "trazabilidad.md"

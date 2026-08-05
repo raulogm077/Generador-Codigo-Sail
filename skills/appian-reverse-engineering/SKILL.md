@@ -75,8 +75,8 @@ Lee `agents/{rol}.md` y aplica sus instrucciones tú mismo, secuencialmente. Res
 | `agents/data-modeler.md` | `03-modelo-datos.md` + ERs por subdominio | Fase 3 (grafo). Puede ir en paralelo con security/process. |
 | `agents/integration-security-analyzer.md` | `04-seguridad-grupos.md`, `05-integraciones-consumidas.md`, `06-apis-expuestas.md` | Fase 3 (grafo). Puede ir en paralelo con data/process. |
 | `agents/process-modeler.md` | `08-procesos-bpmn/*` (BPMN 2.0 + Mermaid + MD por PM) y, **en modo `rebuild`, `10-especificacion/procesos/{PM}-nodos.md`** (segunda invocación en Fase 4.5.1, cuando ya existe `detail.json`) | Fase 3 (grafo). Necesita conocer integraciones para etiquetar nodos — lánzalo **después** o en paralelo con integration-security-analyzer si el grafo ya identifica integraciones. |
-| `agents/interface-spec-writer.md` | `10-especificacion/pantallas/*` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelizable por lotes de ~10 interfaces. |
-| `agents/logic-spec-writer.md` | `10-especificacion/reglas-catalogo.md`, `estados.md` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelo con interface-spec-writer. |
+| `agents/interface-spec-writer.md` | `10-especificacion/pantallas/*` y `navegacion.md` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelizable por lotes de ~10 interfaces. |
+| `agents/logic-spec-writer.md` | `10-especificacion/reglas-catalogo.md` (reglas + decisions + **constants**), `estados.md` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelo con interface-spec-writer. |
 | `agents/backlog-writer.md` | `10-especificacion/backlog.md`, `trazabilidad.md` (**solo `rebuild`**) | Fase 4.5. **Después** de los dos anteriores + `01-funcional.md`. |
 | `agents/pdf-publisher.md` | `EXPORT.pdf` (opcional) | Todos los `.md` finalizados + `summary.json`. |
 | `agents/dashboard-publisher.md` | `dashboard/index.html` (opcional) | Todos los `.md` finalizados + `summary.json`. |
@@ -206,7 +206,8 @@ Agent({ ..., prompt: {agents/backlog-writer.md} + inputs })
 ```
 10-especificacion/
 ├── pantallas/{interfaz}.md (una por CADA interfaz) + indice.md
-├── reglas-catalogo.md        (100% de expression rules y decisions, con su lógica)
+├── navegacion.md             (una ficha por CADA site: páginas y su destino)
+├── reglas-catalogo.md        (100% de expression rules, decisions y constants)
 ├── estados.md                (máquinas de estados por entidad)
 ├── procesos/{PM}-nodos.md    (process variables + ficha por nodo)
 ├── backlog.md                (historias con Gherkin)
@@ -302,6 +303,7 @@ _doc_generada/
 # Solo con `profundidad: rebuild` (Fase 4.5):
 10-especificacion/
 ├── pantallas/{interfaz}.md (una por CADA interfaz) + indice.md
+├── navegacion.md
 ├── reglas-catalogo.md
 ├── estados.md
 ├── procesos/{PM}-nodos.md
