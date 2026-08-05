@@ -1,6 +1,8 @@
 # Reglas de presentación
 
-> Reglas obligatorias para la **distribución y legibilidad** de cada entregable. Léelas antes de escribir cualquier `.md` de `_doc_generada/`. El objetivo no es generar documentos densos, sino documentos que se **lean en cascada** según el interés del lector.
+> **Ámbito**: estas reglas aplican a los documentos del nivel onboarding — `00`-`09` e `INVENTARIO.md` — **NO** a `10-especificacion/` (Nivel 3, modo `rebuild`), donde manda la **exhaustividad**: allí no rigen los topes de longitud ni la síntesis en cascada, y la jerga SAIL es obligatoria. Las plantillas y agentes de `10-especificacion/` definen sus propias reglas.
+
+> Reglas obligatorias para la **distribución y legibilidad** de cada entregable del nivel onboarding. Léelas antes de escribir cualquier `.md` de `_doc_generada/` fuera de `10-especificacion/`. El objetivo no es generar documentos densos, sino documentos que se **lean en cascada** según el interés del lector.
 
 ---
 
@@ -223,7 +225,7 @@ Antes de escribir el `.md` a disco, verifica:
 - [ ] Tiene **Detalle** al pie con fichas uniformes.
 - [ ] Tiene **Resumen rápido** al final con cifras concretas.
 - [ ] Ninguna tabla excede 8 columnas o 15 filas en la Vista.
-- [ ] Ningún diagrama excede el límite por tipo (Tipo A 30, B 12, C 25).
+- [ ] Ningún diagrama excede el límite por tipo (Tipo A ≤ 30 nodos, Tipo B sin techo — criterio de legibilidad de `mermaid-rules.md`, Tipo C ≤ 25 nodos).
 - [ ] Si hay >5 fichas de Detalle, añadir índice navegable.
 - [ ] Emojis de estado de la paleta de 4 (✅/🔵/🟡/🔴).
 - [ ] Cero secciones vacías. Si no hay contenido para una sección, omitirla.

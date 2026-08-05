@@ -14,7 +14,7 @@ Genera **11 entregables Markdown** y **diagramas** (Mermaid SVG para arquitectur
 ## Argumentos esperados
 
 ```
-[ruta_export_appian] [idioma] [salida]
+[ruta_export_appian] [idioma] [salida] [profundidad]
 ```
 
 | Argumento | Obligatorio | Default | Significado |
@@ -22,6 +22,7 @@ Genera **11 entregables Markdown** y **diagramas** (Mermaid SVG para arquitectur
 | `ruta_export_appian` | Sí | — | Carpeta del export Appian descomprimido. Si el usuario no la indica, **pregúntala antes de empezar**. |
 | `idioma` | No | `español` | Idioma de salida. |
 | `salida` | No | `{ruta_export_appian}/_doc_generada/` | Carpeta de salida. |
+| `profundidad` | No | `onboarding` | `onboarding` = los 11 entregables de siempre. `rebuild` = añade la capa `10-especificacion/` (Fase 4.5): spec de reconstrucción exhaustiva. |
 
 Si la ruta no se proporciona o no parece un export Appian válido, **detente y pregunta** antes de generar nada.
 
@@ -74,6 +75,9 @@ Lee `agents/{rol}.md` y aplica sus instrucciones tú mismo, secuencialmente. Res
 | `agents/data-modeler.md` | `03-modelo-datos.md` + ERs por subdominio | Fase 3 (grafo). Puede ir en paralelo con security/process. |
 | `agents/integration-security-analyzer.md` | `04-seguridad-grupos.md`, `05-integraciones-consumidas.md`, `06-apis-expuestas.md` | Fase 3 (grafo). Puede ir en paralelo con data/process. |
 | `agents/process-modeler.md` | `08-procesos-bpmn/*` (BPMN 2.0 + Mermaid + MD por PM) | Fase 3 (grafo). Necesita conocer integraciones para etiquetar nodos — lánzalo **después** o en paralelo con integration-security-analyzer si el grafo ya identifica integraciones. |
+| `agents/interface-spec-writer.md` | `10-especificacion/pantallas/*` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelizable por lotes de ~10 interfaces. |
+| `agents/logic-spec-writer.md` | `10-especificacion/reglas-catalogo.md`, `estados.md` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelo con interface-spec-writer. |
+| `agents/backlog-writer.md` | `10-especificacion/backlog.md`, `trazabilidad.md` (**solo `rebuild`**) | Fase 4.5. **Después** de los dos anteriores + `01-funcional.md`. |
 | `agents/pdf-publisher.md` | `EXPORT.pdf` (opcional) | Todos los `.md` finalizados + `summary.json`. |
 | `agents/dashboard-publisher.md` | `dashboard/index.html` (opcional) | Todos los `.md` finalizados + `summary.json`. |
 
@@ -108,12 +112,29 @@ que siempre genero, ¿quieres alguna salida adicional?
 Puedes elegir varias. Si dudas, recomiendo sólo .md primero."
 ```
 
+**Pregunta también la profundidad** cuando el usuario mencione *reconstruir*, *migrar*, *rehacer de cero*, *rebuild*, *especificación* o *pasar a otra plataforma* — o cuando el objetivo declarado no sea solo entender la app:
+
+```
+"¿Con qué profundidad?
+
+  A. Onboarding (por defecto) — los 11 documentos: entender la app,
+     arquitectura, procesos, datos, integraciones y riesgos.
+  B. Rebuild (especificación) — todo lo anterior MÁS 10-especificacion/:
+     ficha de CADA pantalla componente a componente, catálogo del 100% de
+     reglas con su lógica, máquinas de estados, historias de usuario con
+     criterios de aceptación y matriz de trazabilidad. Sirve para
+     reconstruir la app desde cero.
+
+El modo B multiplica tiempo y tokens (una ficha por interfaz)."
+```
+
 **Reglas duras:**
-- **No asumas.** Sin respuesta explícita → solo Markdown.
-- **Confirma coste** si la app es grande (más de 50 PMs o más de 100 interfaces): PDF/Dashboard añaden 30-90s y tokens extra.
+- **No asumas.** Sin respuesta explícita → solo Markdown y `profundidad: onboarding`.
+- **Confirma coste** si la app es grande (más de 50 PMs o más de 100 interfaces): PDF/Dashboard añaden 30-90s y tokens extra; el modo `rebuild` puede multiplicar por 3-5 el trabajo total.
+- Si el proyecto tiene `.claude/appian-toolkit.local.md` con `re_depth:`, úsalo como default **sin preguntar** la profundidad.
 - Guarda elección en `_intermedio/output_preferences.json`:
   ```json
-  { "markdown": true, "pdf": false, "dashboard": false, "askedAt": "{ISO}" }
+  { "markdown": true, "pdf": false, "dashboard": false, "depth": "onboarding", "askedAt": "{ISO}" }
   ```
 
 ### Fase 1 — Validar export
@@ -151,6 +172,41 @@ Agent({ ..., prompt: {agents/process-modeler.md} + inputs })
 ```
 
 **Paso 4.3** — Cuando los 3 terminan, el orquestador escribe `07-batches.md` y `09-valor-adicional.md` directamente (agregaciones).
+
+### Fase 4.5 — Especificación de reconstrucción (SOLO si `profundidad: rebuild`)
+
+Si `output_preferences.json` tiene `"depth": "onboarding"`, **salta esta fase entera**.
+
+**Paso 4.5.0** — Extraer el detalle estructurado que los agentes de spec necesitan:
+
+```bash
+python scripts/parse_export.py --detail {ruta} --out {salida}/_intermedio/detail.json
+```
+
+**Paso 4.5.1** — Lanzar **en paralelo** (un único turno):
+
+```
+Agent({ ..., prompt: {agents/interface-spec-writer.md} + inputs })   # por lotes de ~10 interfaces
+Agent({ ..., prompt: {agents/logic-spec-writer.md} + inputs })
+```
+
+**Paso 4.5.2** — Cuando ambos terminan, lanzar `backlog-writer` (necesita las fichas + `01-funcional.md`):
+
+```
+Agent({ ..., prompt: {agents/backlog-writer.md} + inputs })
+```
+
+**Regla que invierte la del nivel onboarding**: en `10-especificacion/` la jerga SAIL es **obligatoria** y los predicados se copian **exactos**. Los topes de longitud de `presentation-rules.md` **no aplican** aquí: manda la exhaustividad. Salida:
+
+```
+10-especificacion/
+├── pantallas/{interfaz}.md (una por CADA interfaz) + indice.md
+├── reglas-catalogo.md        (100% de expression rules y decisions, con su lógica)
+├── estados.md                (máquinas de estados por entidad)
+├── procesos/{PM}-nodos.md    (process variables + ficha por nodo)
+├── backlog.md                (historias con Gherkin)
+└── trazabilidad.md           (matriz bidireccional objeto ↔ requisito)
+```
 
 ### Fase 5 — Renderizar diagramas con Iterative Refinement
 
@@ -201,6 +257,9 @@ Carga estos archivos cuando los necesites — **no todos a la vez**. Sigue progr
 | `agents/data-modeler.md` | Como prompt del subagente de Fase 4.2. |
 | `agents/integration-security-analyzer.md` | Como prompt del subagente de Fase 4.2. |
 | `agents/process-modeler.md` | Como prompt del subagente de Fase 4.2. |
+| `agents/interface-spec-writer.md` | Prompt del subagente de Fase 4.5 (solo `rebuild`). |
+| `agents/logic-spec-writer.md` | Prompt del subagente de Fase 4.5 (solo `rebuild`). |
+| `agents/backlog-writer.md` | Prompt del subagente de Fase 4.5, tras los dos anteriores (solo `rebuild`). |
 | `agents/pdf-publisher.md` | Como prompt del subagente de Fase 7 (si `pdf: true`). |
 | `agents/dashboard-publisher.md` | Como prompt del subagente de Fase 7 (si `dashboard: true`). |
 | `assets/markdown-templates/*.md` | Como base de cada documento de la Fase 4. **Cópialos** a `_doc_generada/` y rellénalos con datos reales. |
@@ -209,7 +268,8 @@ Carga estos archivos cuando los necesites — **no todos a la vez**. Sigue progr
 | `scripts/build_summary.py` | Fase 6.5. Consolida `summary.json`. |
 | `scripts/detect_secrets.sh` | Fase 2 y antes de escribir documentos. |
 | `scripts/render_diagrams.sh` | Fase 5. Renderiza `.mmd` → `.svg` con `mmdc`. |
-| `scripts/validate_mermaid.py` | Después de cada bloque Mermaid, antes de escribirlo. |
+| `scripts/validate_mermaid.py` | Después de cada bloque Mermaid, antes de escribirlo. Soporta tipos A (flowchart), B (`erDiagram`) y C (lanes con `subgraph`). |
+| `scripts/check_coverage.py` | **Validación final, siempre.** Gate de cobertura por tipo de objeto. Exit 1 = faltan objetos por documentar. |
 
 ---
 
@@ -269,10 +329,18 @@ Comprueba al inicio de Fase 5 con `scripts/render_diagrams.sh --check`.
 
 ## Validación final (antes de devolver respuesta)
 
-1. Existen los 11 ficheros en `{ruta}/_doc_generada/`.
+**0. Gate de cobertura — obligatorio y calculado, no "a ojo":**
+
+```bash
+python scripts/check_coverage.py {ruta}/_doc_generada --mode {onboarding|rebuild}
+```
+
+Debe salir **0**. Si sale 1, imprime los objetos que faltan: documéntalos y vuelve a ejecutarlo. **Adjunta la tabla de cobertura en la respuesta final.** En modo `rebuild`, un objeto solo puede quedar fuera si aparece en `10-especificacion/trazabilidad.md` como `DESCARTADO: {motivo}`.
+
+1. Existen los 11 ficheros en `{ruta}/_doc_generada/` (+ `10-especificacion/` si `profundidad: rebuild`).
 2. `08-procesos-bpmn/` tiene un `.bpmn`/`.mmd`/`.md` por process model + `indice.md` los lista todos.
 3. Cada diagrama Mermaid pasó por `scripts/validate_mermaid.py`. Los rechazados están sustituidos por tabla.
-4. `scripts/detect_secrets.sh` no encuentra secretos sin enmascarar en los entregables.
+4. `scripts/detect_secrets.sh` no encuentra secretos sin enmascarar en los entregables — **incluida `10-especificacion/`**, donde se cita SAIL literal.
 5. No hay placeholders ni texto genérico (`lorem ipsum`, `TBD`, `xxx`).
 6. No has escrito nada fuera de `{ruta}/_doc_generada/`.
 7. Cada conclusión importante tiene `Evidencia: {ruta}#{fragmento}` o está marcada como pendiente con responsable.

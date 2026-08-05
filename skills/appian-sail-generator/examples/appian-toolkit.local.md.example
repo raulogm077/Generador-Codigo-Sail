@@ -20,6 +20,13 @@ ai_components_available: true
 # Phase 2: prefer native a!kpiField over converted card KPIs when the
 # decision rule in display-conversion-kpis.md § Pattern 0 allows it.
 prefer_native_kpis: true
+
+# appian-reverse-engineering: default depth when documenting an export.
+# "onboarding" = the 11 standard deliverables.
+# "rebuild"    = adds 10-especificacion/ (screen-by-screen spec, 100% rule
+#                catalogue, state machines, user stories, traceability).
+# When set, the skill uses it WITHOUT asking.
+re_depth: "onboarding"
 ---
 
 # Project notes (free-form — the generator reads this as context)

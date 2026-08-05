@@ -50,7 +50,7 @@ if [ -s "$tmp" ]; then
   echo '|---|---|'
   cat "$tmp"
   echo
-  echo "**Acción:** documentar como riesgo de seguridad en \`05_riesgos_deuda_tecnica.md\` sin reproducir los valores. Recomendar rotación inmediata y movimiento a vault / variables seguras."
+  echo "**Acción:** documentar como riesgo de seguridad en \`09-valor-adicional.md\` (sección de riesgos) sin reproducir los valores. Recomendar rotación inmediata y movimiento a vault / variables seguras."
   exit 1
 else
   echo "## Sin coincidencias"

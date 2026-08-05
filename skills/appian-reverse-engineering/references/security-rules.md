@@ -54,7 +54,7 @@ Usa `scripts/detect_secrets.sh` para hacer este barrido de forma estandarizada.
 
 1. **No copies el valor** a ningún documento ni dato de la web.
 2. **Enmascáralo** consistentemente como `***ENMASCARADO***` o `[REDACTED]`.
-3. Crea una entrada en `05_riesgos_deuda_tecnica.md` con:
+3. Crea una entrada en la sección de riesgos de `09-valor-adicional.md` con:
    - **Tipo**: Seguridad — Secreto expuesto.
    - **Evidencia**: ruta del fichero, **sin** el valor; opcionalmente número de línea y nombre de la propiedad.
    - **Impacto**: Alto (potencial exposición de credenciales).

@@ -1,6 +1,24 @@
-# Flujo operativo de análisis (7 fases)
+# Flujo operativo de análisis
 
-Detalle de las 7 fases del SKILL.md con checklists, patrones a buscar y salida esperada. Léelo al inicio del trabajo.
+Detalle operativo de las fases que orquesta `SKILL.md`, con checklists, patrones a buscar y salida esperada. Léelo al inicio del trabajo.
+
+## Mapa de fases (el orden real que ejecuta el orquestador)
+
+| Fase | Qué hace | Quién |
+|---|---|---|
+| **0 — Elicitación** | Preguntar formatos de salida (MD siempre; PDF/Dashboard opcionales) y **profundidad** (`onboarding` por defecto \| `rebuild`). Guardar en `_intermedio/output_preferences.json`. | Orquestador |
+| **1 — Validar export** | Detectar formato Haul o antiguo. | Orquestador |
+| **2 — Inventariar** | `INVENTARIO.md` + `_intermedio/inventory.json` + barrido de secretos. | Orquestador |
+| **3 — Grafo** | `_intermedio/graph.json`. | Orquestador |
+| **4 — Entregables 01→09** | 4.1 `interface-analyzer` (va primero); 4.2 `data-modeler` + `integration-security-analyzer` + `process-modeler` **en paralelo**; 4.3 el orquestador escribe `07-batches.md` y `09-valor-adicional.md`. | Subagentes de `agents/` |
+| **4.5 — Especificación (solo `profundidad: rebuild`)** | `parse_export.py --detail` → `_intermedio/detail.json`; luego `interface-spec-writer` + `logic-spec-writer` en paralelo y, al terminar ambos, `backlog-writer`. Produce `10-especificacion/`. | Subagentes |
+| **5 — Renderizar diagramas** | Mermaid → SVG con refinamiento iterativo. | Orquestador |
+| **6 — Resumen ejecutivo** | `00-resumen-ejecutivo.md` (al final: depende del resto). | Orquestador |
+| **6.5 — summary.json** | `build_summary.py` (siempre; lo consumen los publishers). | Orquestador |
+| **7 — Publicación opcional** | `pdf-publisher` y/o `dashboard-publisher` según preferencias. | Subagentes |
+| **8 — Respuesta final** | Plantilla literal de `response-format.md` + tabla de cobertura. | Orquestador |
+
+**Cierre obligatorio de cualquier ejecución**: `python scripts/check_coverage.py <salida> --mode {onboarding\|rebuild}` debe salir 0. Si sale 1, documenta los objetos que faltan antes de cerrar.
 
 ## Convenciones de toda la salida
 
@@ -8,6 +26,7 @@ Detalle de las 7 fases del SKILL.md con checklists, patrones a buscar y salida e
 - **Estados**: ✅ Confirmado · 🔵 Inferido · 🟡 Pendiente · 🔴 Riesgo.
 - **Nivel de confianza**: Alta / Media / Baja.
 - **Carpeta de salida**: `<ruta_export>/_doc_generada/`.
+- **Ficheros intermedios** (nombres exactos, en inglés): `inventory.json`, `graph.json`, `detail.json`, `coverage.json`, `summary.json`, `output_preferences.json`.
 
 ---
 
@@ -50,7 +69,7 @@ Detalle de las 7 fases del SKILL.md con checklists, patrones a buscar y salida e
 
 1. **Barrido bruto** con `scripts/inventory.sh <ruta>` para obtener un primer mapa de extensiones y carpetas.
 2. **Detección de objetos por contenido** — patrones de identificación en `references/appian-objects-guide.md` (tabla "Reconocimiento por XML"). Recorre TODOS los XML del export.
-3. **Inventariado estructurado** con `scripts/parse_export.py <ruta> --output <ruta>/_doc_generada/_intermedio/inventario.json`. Produce JSON con, por tipo de objeto:
+3. **Inventariado estructurado** con `scripts/parse_export.py --inventory <ruta> --out <ruta>/_doc_generada/_intermedio/inventory.json`. Produce JSON con, por tipo de objeto:
    - `name` (técnico)
    - `displayName` (visible)
    - `uuid` (si está)
@@ -112,7 +131,7 @@ Tabla por categoría, en este orden (omite las categorías con cero objetos):
    - Referenciado pero NO existe en el inventario → arista a "externa" + marcar 🔴 (dependencia faltante en el export).
    - En el inventario pero NO referenciado por nadie → candidato a **huérfano**, marcar 🟡 para Fase 4 (`09-valor-adicional.md`).
 
-3. **Salida intermedia**: `_doc_generada/_intermedio/grafo.json` con `nodes` (objetos) y `edges` (`{from, to, type, evidence}`). Lo produce `scripts/parse_export.py --graph`.
+3. **Salida intermedia**: `_doc_generada/_intermedio/graph.json` con `nodes` (objetos) y `edges` (`{from, to, type, evidence}`). Lo produce `scripts/parse_export.py --graph`.
 
 4. **Detección automática de**:
    - **Subprocesos vs procesos raíz**: un PM es raíz si no aparece como `target` de ninguna arista `a!startProcess` y no es subprocess de otro PM.
@@ -123,7 +142,7 @@ Tabla por categoría, en este orden (omite las categorías con cero objetos):
 
 ### Salida
 
-- `_intermedio/grafo.json` (consumido por las fases siguientes; no es entregable final).
+- `_intermedio/graph.json` (consumido por las fases siguientes; no es entregable final).
 - Lista de candidatos a huérfanos.
 - Lista de acoplamientos fuertes y ciclos detectados.
 

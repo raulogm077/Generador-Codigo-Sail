@@ -140,7 +140,7 @@ Un objeto es **crítico** cuando cumple varios de estos criterios:
 - Tiene lógica de seguridad (permisos, validación de roles).
 - Su naming sugiere centralidad (`*_Main_*`, `*_Master_*`, `*_Core_*`).
 
-Marca estos objetos en la matriz de trazabilidad con criticidad **Alta** o **Crítica**.
+Marca estos objetos con criticidad **Alta** o **Crítica**. En modo `rebuild`, esa marca se refleja en la matriz de trazabilidad `10-especificacion/trazabilidad.md` (una fila por objeto del `inventory.json`, generada por `agents/backlog-writer.md`); en modo `onboarding`, en la tabla de criticidad de `02-arquitectura.md` o `09-valor-adicional.md`.
 
 ## Heurísticas de complejidad y deuda
 

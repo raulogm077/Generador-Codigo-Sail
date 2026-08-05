@@ -32,6 +32,8 @@ Aplican a cada `.md`, cada diagrama, cada celda de tabla.
 
 10. **Idioma**: español neutro técnico salvo que el usuario pida otro.
 
+11. **Exhaustividad en el Nivel 3.** Los principios 4 y 7 ("cero relleno", "conocimiento accionable > listados") gobiernan los documentos `00-09` e `INVENTARIO.md`, cuyo objetivo es que alguien *entienda* la app. En `10-especificacion/` (modo `rebuild`) la regla se **invierte**: el objetivo es que alguien *reconstruya* la app, así que ahí manda la completitud verificable — jerga SAIL obligatoria, predicados copiados exactos, una ficha por cada objeto y sin topes de longitud. Una sección sin contenido no se omite: se marca `N/A: {motivo}`. Lo que no se pudo analizar se declara `NO ANALIZADO: {qué y por qué}`; nunca se trunca en silencio.
+
 ---
 
 ## 2. Reglas de presentación (cómo distribuir la información)
