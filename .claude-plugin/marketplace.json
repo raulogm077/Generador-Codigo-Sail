@@ -12,8 +12,8 @@
     {
       "name": "appian-toolkit",
       "source": "./",
-      "description": "Generacion y validacion de interfaces SAIL (mockups y conversion funcional con Data Fabric), reingenieria inversa de exports Appian, analisis funcional, y 6 subagentes validadores/transformadores. Sincronizado con Appian 26.x.",
-      "version": "2.5.1",
+      "description": "Generacion y validacion de interfaces SAIL (mockups y conversion funcional con Data Fabric), reingenieria inversa de exports Appian en dos modos (onboarding y rebuild-spec para reconstruir una app desde cero), analisis funcional, y 16 subagentes especializados. Sincronizado con Appian 26.x.",
+      "version": "2.5.2",
       "author": {
         "name": "Raul Gomez Moya"
       },

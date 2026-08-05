@@ -43,9 +43,14 @@ A partir de un **export de aplicación Appian descomprimido** (formato Haul: `ap
 | Modo | Para qué | Qué añade |
 |---|---|---|
 | `onboarding` *(por defecto)* | Entender la app y hacer onboarding de un consultor nuevo | Los 11 documentos de siempre |
-| `rebuild` | **Reconstruir la app desde cero** con garantías | `10-especificacion/`: ficha de CADA pantalla componente a componente con los predicados exactos (`showWhen`, `required`, validaciones), catálogo del **100%** de expression rules y decisions con su lógica, **máquinas de estados** por entidad, ficha por nodo de cada proceso, **historias de usuario con criterios de aceptación en Gherkin** y matriz de trazabilidad bidireccional |
+| `rebuild` | **Reconstruir la app desde cero** con garantías | `10-especificacion/`: ficha de CADA pantalla componente a componente con los predicados exactos (`showWhen`, `required`, validaciones), catálogo del **100%** de expression rules, decisions y constants con su lógica y sus valores, **máquinas de estados** por entidad, ficha de navegación por site, ficha por nodo de cada proceso, **historias de usuario con criterios de aceptación en Gherkin** y matriz de trazabilidad bidireccional |
 
-Ninguna ejecución se cierra "en verde" sin pasar un **gate de cobertura calculado** (`check_coverage.py`): si un objeto del export no está documentado, el gate falla y lo nombra. En modo `rebuild`, para pantallas y reglas no basta con mencionarlas — exige ficha propia.
+Ninguna ejecución se cierra "en verde" sin pasar **dos gates calculados**, no estimados a ojo:
+
+- **`check_coverage.py`** — ¿está todo documentado? Si un objeto del export no aparece, falla y lo nombra. En modo `rebuild` no basta con mencionar una pantalla, regla, decision, constante o site: exige **ficha propia**.
+- **`check_spec_layout.py`** — ¿están bien formados los documentos? Layout, enlaces y anclas rotos, secciones obligatorias de cada ficha, criterios de reconstrucción verificables y placeholders sin rellenar.
+
+Ambos están cubiertos por tests que los ejercitan **en positivo y en negativo**: un gate que no puede fallar no es un gate.
 
 En ambos modos:
 
@@ -53,7 +58,7 @@ En ambos modos:
 - **Diagramas**: BPMN 2.0 validado por process model, modelo ER en SVG, mapa de integraciones.
 - **Seguridad por defecto**: detecta y **enmascara secretos** (tokens, passwords, claves API) antes de escribir nada — el export es interno, la documentación se comparte.
 - Opcionalmente (preguntando antes): PDF maquetado o dashboard web navegable.
-- Funciona **offline** sobre la carpeta del export; 6 agentes internos especializados (`interface-analyzer`, `process-modeler`, `data-modeler`, `integration-security-analyzer`, `pdf-publisher`, `dashboard-publisher`).
+- Funciona **offline** sobre la carpeta del export; 9 agentes internos especializados: 4 de análisis (`interface-analyzer`, `data-modeler`, `integration-security-analyzer`, `process-modeler`), 3 de especificación que solo actúan en modo `rebuild` (`interface-spec-writer`, `logic-spec-writer`, `backlog-writer`) y 2 publishers opcionales (`pdf-publisher`, `dashboard-publisher`).
 
 Uso: *"Documenta esta aplicación: ./exports/MiApp/"* — o pide directamente *"el BPMN del proceso de aprobación"* o *"el modelo ER"*.
 
@@ -139,7 +144,7 @@ agents/                       7 agentes del plugin (validadores, conversor, spli
 skills/
   appian-sail-generator/      SKILL.md · schemas JSON (~140 funciones) · catálogo de iconos
                               guías de layouts/componentes/lógica/conversión · scripts · ejemplos
-  appian-reverse-engineering/ SKILL.md · 6 agentes internos · plantillas de los 11 documentos
+  appian-reverse-engineering/ SKILL.md · 9 agentes internos · plantillas de los 11 documentos
                               reglas de seguridad/enmascarado · scripts (BPMN, secretos)
 ```
 
