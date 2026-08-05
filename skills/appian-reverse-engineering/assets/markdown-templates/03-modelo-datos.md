@@ -123,10 +123,12 @@ erDiagram
 
 **Campos clave**
 
-| Campo | Tipo | Visible | Key | Notas |
-|---|---|---|---|---|
-| `id` | long | Sí | Sí | PK |
-| `{{campo_2}}` | string | Sí | No | {{descripción breve}} |
+> Semántica de campos: `Obligatorio` sale de `detail.json` (`fields[].required`); `Dominio/valores` del cruce con constants/máquinas de estados (con evidencia); `Default` y `Regla de cálculo` de defaults/expresiones observados en XML o SAIL. Celda sin evidencia → `—` (nunca se omite la columna).
+
+| Campo | Tipo | Visible | Key | Obligatorio | Dominio/valores | Default | Regla de cálculo | Notas |
+|---|---|---|---|---|---|---|---|---|
+| `id` | long | Sí | Sí | Sí | — | — | — | PK |
+| `{{campo_2}}` | string | Sí | No | {{Sí/No}} | {{p.ej. `BORRADOR/ENVIADO/...` — Evidencia: `{{ruta_constant}}`}} | {{valor o —}} | {{expresión que lo calcula o —}} | {{descripción breve}} |
 
 **Record Views**
 
@@ -143,6 +145,16 @@ erDiagram
 **Related Records**
 
 - → `{{RT_Otro}}` vía `{{join_descripción}}`.
+
+**Sub-entidades del record** (User filters · Custom fields · Record events)
+
+> Sección obligatoria en cada ficha. Si el XML del RT los declara, listarlos. Si el parser no los expone aún, buscar por tag directamente en el XML; si tampoco así se puede determinar → fila `🟡 no analizado — {{motivo}}`. Si el XML no declara ninguno → una fila `— (el XML no declara ninguna)`.
+
+| Sub-entidad | Nombre | Configuración relevante | Evidencia |
+|---|---|---|---|
+| User filter | `{{filtro_1}}` | {{campo filtrado + opciones o expresión}} | `{{ruta_xml}}#{{tag}}` |
+| Custom field | `{{campo_custom_1}}` | {{tipo + expresión de cálculo}} | `{{ruta_xml}}#{{tag}}` |
+| Record events | {{configurado / no configurado}} | {{RT de historial de eventos + acciones monitorizadas}} | `{{ruta_xml}}#{{tag}}` |
 
 **Notas relevantes** (si aplica):
 - {{nota_1}}
@@ -173,10 +185,12 @@ erDiagram
 
 **Campos**
 
-| Nombre | Tipo XSD | Columna BBDD | PK/FK | Comentario |
-|---|---|---|---|---|
-| `id` | xsd:long | id | PK | — |
-| `{{campo_2}}` | xsd:string | {{col}} | — | {{descripción}} |
+> Mismas columnas de semántica que en la ficha de Record Type. `Obligatorio` sale del XSD (`minOccurs`, ya expuesto como `required` en `detail.json`); celda sin evidencia → `—` (nunca se omite la columna).
+
+| Nombre | Tipo XSD | Columna BBDD | PK/FK | Obligatorio | Dominio/valores | Default | Regla de cálculo | Comentario |
+|---|---|---|---|---|---|---|---|---|
+| `id` | xsd:long | id | PK | Sí | — | — | — | — |
+| `{{campo_2}}` | xsd:string | {{col}} | — | {{Sí/No}} | {{valores con evidencia o —}} | {{default del XSD o —}} | {{expresión o —}} | {{descripción}} |
 
 **Relaciones declaradas**
 

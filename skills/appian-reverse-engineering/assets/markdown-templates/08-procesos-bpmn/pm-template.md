@@ -31,6 +31,14 @@
 | Complejidad estimada | Baja / Media / Alta |
 | Estado | ✅ Confirmado · Evidencia: `{{ruta_xml}}` |
 
+## 📦 Process variables
+
+> TODAS las PVs declaradas en el XML del PM (`<processVariables>`), sean parámetro o no. Fuente: `detail.json → processModels.{{PM}}.processVariables`. Si el PM no declara ninguna: `N/A — el XML no declara process variables`.
+
+| PV | Tipo | ¿Parámetro? |
+|---|---|---|
+| `{{pv_nombre}}` | {{tipo}} | {{sí / no}} |
+
 ## 🖼 Diagrama (vista preliminar)
 
 > Vista preliminar Mermaid Tipo C. Para BPMN profesional auténtico, abrir [`{{PM}}.bpmn`](./{{PM}}.bpmn) en Camunda Modeler, draw.io o [bpmn.io](https://demo.bpmn.io).

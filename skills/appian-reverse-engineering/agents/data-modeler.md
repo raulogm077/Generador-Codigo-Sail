@@ -13,6 +13,7 @@ Lees los XSDs de CDTs y los XMLs de Record Types del export Appian. Tu salida es
 - `<ruta_export>/` — export Appian descomprimido (read-only).
 - `<ruta_salida>/_intermedio/inventory.json` — inventario producido por `scripts/parse_export.py --inventory` en Fase 2.
 - `<ruta_salida>/_intermedio/graph.json` — grafo de dependencias producido en Fase 3.
+- `<ruta_salida>/_intermedio/detail.json` — extracción estructurada de `scripts/parse_export.py --detail` (campos con `required`, constants con `value`, decisions, PVs). Si no existe, ejecútalo tú antes de empezar; si el script falla, cae a leer los XML/XSD directamente y márcalo en Hallazgos.
 - `assets/markdown-templates/03-modelo-datos.md` — plantilla base.
 - `references/mermaid-rules.md` — reglas para `erDiagram` Tipo B.
 - `references/appian-objects-guide.md` — sección "CDTs (XSDs)" y "Record Types".
@@ -29,7 +30,32 @@ Lee `_intermedio/inventory.json` y extrae:
 
 Si falta cualquier dato, **no inventes**: marca `⚠️ no determinado en el export — pendiente de validación con DBA/funcional`.
 
-### Paso 2 — Detectar relaciones
+### Paso 2 — Semántica de campos (Obligatorio · Dominio/valores · Default · Regla de cálculo)
+
+Las fichas de Record Type y de CDT llevan estas 4 columnas SIEMPRE. De dónde sale cada una:
+
+| Columna | Fuente primaria | Fuente secundaria |
+|---|---|---|
+| **Obligatorio** | `detail.json → recordTypes[RT].fields[].required` (atributo `required` del XML del RT) | En CDTs: `required` derivado de `minOccurs` del XSD (ya normalizado en `detail.json → cdts`) |
+| **Dominio/valores** | Constants con lista de valores (`detail.json → constants[*].value`) asociables al campo por nombre o por uso — p.ej. `DEMO_CONS_ESTADOS` → campo `estado` | Valores comparados en gateways de PMs y `showWhen` de interfaces; filas/outputs de decisions (`detail.json → decisions`) |
+| **Default** | Atributo `default` del XSD | Inicializaciones observadas en SAIL o en el nodo del PM que crea el registro |
+| **Regla de cálculo** | Custom fields del RT (expresión declarada en su XML) | Expresiones que escriben el campo (script tasks, `saveInto` con transformación) |
+
+Reglas duras:
+
+- Cada dominio de valores lleva su evidencia: `Evidencia: {ruta_xml_de_la_constant_o_decision}`. Asociación solo por nombre, sin uso confirmado → marcar 🔵 Inferido.
+- Celda sin evidencia → `—`. La columna NUNCA se omite y NUNCA se rellena por intuición.
+
+### Paso 3 — Sub-entidades del record (User filters · Custom fields · Record events)
+
+Cada ficha de RT incluye la sección "Sub-entidades del record". Método:
+
+1. Si `detail.json` / `inventory.json` ya exponen estos datos, úsalos.
+2. Si el parser no los expone aún, busca por tag directamente en el XML del Record Type: `<userFilter>` / `<facet>` / `<fieldFacet>` (user filters), `<customField>` / `<customFieldExpr>` (custom fields), `<recordEvents>` / `<eventData>` (record events). Los nombres de tag varían entre versiones de Appian: prueba también variantes case-insensitive que contengan `filter`, `customField`, `event`.
+3. Si el XML no declara ninguno → fila `— (el XML no declara ninguna)`.
+4. Si no puedes determinarlo (XML ilegible, formato desconocido) → fila `🟡 no analizado — {motivo}`. Nunca omitas la sección ni la des por vacía sin haber buscado.
+
+### Paso 4 — Detectar relaciones
 
 Para cada CDT y Record Type, identifica:
 - **FK explícitas**: anotaciones JPA `@JoinColumn` / `@OneToMany` / `@ManyToOne` en los XSDs.
@@ -37,7 +63,7 @@ Para cada CDT y Record Type, identifica:
 - **Joins inferidos**: campos cuyo nombre sugiere FK (`idCliente`, `expedienteId`, etc.) y coinciden con la PK de otra entidad. Marca estos como 🔵 Inferido.
 - **Referencias en SAIL**: si una Expression Rule o Process Model usa `a!queryRecordType(recordType: recordType!RT_X)` desde el contexto de otro record, hay una dependencia funcional aunque no esté declarada.
 
-### Paso 3 — Detectar subdominios
+### Paso 5 — Detectar subdominios
 
 Agrupa entidades por afinidad:
 1. **Por prefijo del nombre técnico**: `RT_Expediente_*` → subdominio "Expedientes"; `RT_Cliente_*` → subdominio "Clientes"; etc.
@@ -46,7 +72,7 @@ Agrupa entidades por afinidad:
 
 Cada entidad pertenece a **un** subdominio primario. Si una entidad puente conecta dos subdominios (típico de FK), aparece en el principal y se referencia desde el otro.
 
-### Paso 4 — Decidir estrategia de diagramas
+### Paso 6 — Decidir estrategia de diagramas
 
 Cuenta entidades totales = #Record Types + #CDTs.
 
@@ -58,7 +84,7 @@ Cuenta entidades totales = #Record Types + #CDTs.
 
 **No hay techo absoluto.** El criterio es legibilidad. Si un subdominio acaba con >15 entidades, considera si tiene sentido partirlo más (sub-subdominios).
 
-### Paso 5 — Generar diagramas
+### Paso 7 — Generar diagramas
 
 Para cada `erDiagram`:
 
@@ -71,7 +97,7 @@ Para cada `erDiagram`:
 3. Invoca `scripts/render_diagrams.sh --mermaid <archivo.mmd>` para renderizar a SVG. Si `mmdc` no está disponible, deja el bloque `.mmd` embebido en `03-modelo-datos.md`.
 4. Valida cada `.mmd` con `scripts/validate_mermaid.py` antes de escribirlo.
 
-### Paso 6 — Generar `03-modelo-datos.md`
+### Paso 8 — Generar `03-modelo-datos.md`
 
 Estructura obligatoria (de `assets/markdown-templates/03-modelo-datos.md` y `references/presentation-rules.md`):
 
@@ -81,12 +107,12 @@ Estructura obligatoria (de `assets/markdown-templates/03-modelo-datos.md` y `ref
 4. **Diagrama ER global** (si aplica según tamaño).
 5. **Diagramas ER por subdominio** (si aplica): uno por subdominio con su propio TL;DR de 1 frase.
 6. **Mapeo de nombres saneados** (si aplica): tabla "nombre técnico real ↔ nombre en diagrama".
-7. **📋 Catálogo de Record Types**: tabla resumen escaneable (1 fila por RT) + fichas individuales con campos clave, vistas, actions, related records.
-8. **🧱 Catálogo de CDTs**: tabla resumen + fichas individuales con campos, mapeo JPA, uso.
+7. **📋 Catálogo de Record Types**: tabla resumen escaneable (1 fila por RT) + fichas individuales con campos clave (incluidas las columnas `Obligatorio | Dominio/valores | Default | Regla de cálculo` del Paso 2), vistas, actions, related records y la sección "Sub-entidades del record" del Paso 3.
+8. **🧱 Catálogo de CDTs**: tabla resumen + fichas individuales con campos (mismas 4 columnas de semántica), mapeo JPA, uso.
 9. **💽 Data Stores**: tabla.
 10. **🔍 Hallazgos**: solo si hay algo no trivial (records sin CDT, CDTs huérfanos, ciclos detectados, etc.).
 
-### Paso 7 — Validación final
+### Paso 9 — Validación final
 
 Antes de cerrar:
 
@@ -96,6 +122,9 @@ Antes de cerrar:
 - [ ] Las relaciones FK declaradas en XSDs están reflejadas en el ER (con notación canónica).
 - [ ] Las relaciones inferidas están marcadas 🔵 Inferido en el texto, no en el diagrama.
 - [ ] Cada ficha tiene `Estado` (✅/🔵/🟡/🔴) y `Evidencia: <ruta>#<fragmento>`.
+- [ ] Toda tabla de campos (RT y CDT) tiene las 4 columnas de semántica; las celdas sin evidencia llevan `—`, ninguna columna omitida.
+- [ ] Todo `Dominio/valores` no vacío tiene su `Evidencia:` (constant, decision, gateway o showWhen).
+- [ ] Cada ficha de RT tiene la sección "Sub-entidades del record" (con contenido, `—` o `🟡 no analizado — {motivo}`).
 - [ ] No hay placeholders sin rellenar (`{{...}}`, `<TODO>`, `xxx`).
 
 ## Salida
@@ -110,5 +139,7 @@ Antes de cerrar:
 - ❌ Apilar 40 entidades en un ER global "porque el límite era 12 antes". El criterio es **legibilidad**, no número.
 - ❌ Generar ER con todos los CDTs huérfanos (los que no se usan en ningún Record/PV). Estos solo aparecen en el catálogo y en `09-valor-adicional.md` → huérfanos.
 - ❌ Inventar relaciones cuando el XSD no las declara y no hay evidencia de uso en SAIL.
+- ❌ Inventar dominio de valores no evidenciado ("estado seguramente sea Abierto/Cerrado"). Sin constant, decision, gateway o `showWhen` que lo respalde, la celda es `—`.
+- ❌ Omitir las columnas de semántica o la sección de sub-entidades "porque no hay datos" — el hueco se declara (`—` o `🟡 no analizado`), no se esconde.
 - ❌ Usar el mismo subdominio para todo. Si solo hay un subdominio identificable, di que el modelo está fuertemente acoplado y particiona por **temática** aunque sea aproximada.
 - ❌ Renderizar diagramas sin validar primero con `validate_mermaid.py`.
