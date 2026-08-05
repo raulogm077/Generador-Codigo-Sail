@@ -1,6 +1,6 @@
 ---
 name: appian-reverse-engineering
-description: Reingenieria inversa de aplicaciones Appian a partir de su carpeta exportada. Produce 11 documentos Markdown (funcional, arquitectura, modelo de datos, seguridad, integraciones, APIs, batches, BPMN por process model, valor adicional, inventario, resumen ejecutivo) mas diagramas SVG y BPMN 2.0 validados. Opcionalmente (preguntando antes) un PDF maquetado o un dashboard web. Funciona offline sobre el export desempaquetado. Usala siempre que el usuario apunte a una carpeta con un export Appian (formato Haul con applicationHaul, processModelHaul, recordTypeHaul, siteHaul, contentHaul, etc. o formato antiguo con application.xml), mencione documentar, hacer onboarding, reingenieria inversa o entender una app Appian heredada, pase XMLs de objetos Appian (records, CDTs, process models, integrations, web APIs, interfaces, expression rules), o pida un diagrama BPMN, modelo ER o mapa de integraciones de Appian, aunque no diga literalmente reingenieria inversa.
+description: Reingenieria inversa de aplicaciones Appian a partir de su carpeta exportada. Produce 11 documentos Markdown (funcional, arquitectura, modelo de datos, seguridad, integraciones, APIs, batches, BPMN por process model, valor adicional, inventario, resumen ejecutivo) mas diagramas SVG y BPMN 2.0 validados. Opcionalmente (preguntando antes) un PDF maquetado o un dashboard web. Funciona offline sobre el export desempaquetado. Usala siempre que el usuario apunte a una carpeta con un export Appian (formato Haul con applicationHaul, processModelHaul, recordTypeHaul, siteHaul, contentHaul, etc. o formato antiguo con application.xml), mencione documentar, hacer onboarding, reingenieria inversa o entender una app Appian heredada, pase XMLs de objetos Appian (records, CDTs, process models, integrations, web APIs, interfaces, expression rules), o pida un diagrama BPMN, modelo ER o mapa de integraciones de Appian, aunque no diga literalmente reingenieria inversa. Tiene ademas un modo `rebuild` (especificacion de reconstruccion) que se activa cuando el usuario quiere reconstruir, rehacer de cero, migrar o reimplementar una app Appian existente, o pide una especificacion funcional detallada, historias de usuario, criterios de aceptacion, maquinas de estados, spec de pantallas o matriz de trazabilidad a partir del export.
 ---
 
 # Appian Reverse Engineering
@@ -38,7 +38,7 @@ Si la ruta no se proporciona o no parece un export Appian válido, **detente y p
 
 ## Arquitectura de subagentes (patrón Anthropic)
 
-Esta skill **delega trabajo a 6 subagentes especializados** definidos en `agents/`. Cada agente es un fichero `.md` con instrucciones para un rol concreto — el mismo patrón que usa el `skill-creator` oficial de Anthropic.
+Esta skill **delega trabajo a 9 subagentes especializados** definidos en `agents/`. Cada agente es un fichero `.md` con instrucciones para un rol concreto — el mismo patrón que usa el `skill-creator` oficial de Anthropic.
 
 **Por qué subagentes y no un único Claude haciendo todo:**
 
@@ -74,7 +74,7 @@ Lee `agents/{rol}.md` y aplica sus instrucciones tú mismo, secuencialmente. Res
 | `agents/interface-analyzer.md` | `01-funcional.md`, `02-arquitectura.md` | Fase 3 (grafo). Va **primero** — los demás lo citan. |
 | `agents/data-modeler.md` | `03-modelo-datos.md` + ERs por subdominio | Fase 3 (grafo). Puede ir en paralelo con security/process. |
 | `agents/integration-security-analyzer.md` | `04-seguridad-grupos.md`, `05-integraciones-consumidas.md`, `06-apis-expuestas.md` | Fase 3 (grafo). Puede ir en paralelo con data/process. |
-| `agents/process-modeler.md` | `08-procesos-bpmn/*` (BPMN 2.0 + Mermaid + MD por PM) | Fase 3 (grafo). Necesita conocer integraciones para etiquetar nodos — lánzalo **después** o en paralelo con integration-security-analyzer si el grafo ya identifica integraciones. |
+| `agents/process-modeler.md` | `08-procesos-bpmn/*` (BPMN 2.0 + Mermaid + MD por PM) y, **en modo `rebuild`, `10-especificacion/procesos/{PM}-nodos.md`** (segunda invocación en Fase 4.5.1, cuando ya existe `detail.json`) | Fase 3 (grafo). Necesita conocer integraciones para etiquetar nodos — lánzalo **después** o en paralelo con integration-security-analyzer si el grafo ya identifica integraciones. |
 | `agents/interface-spec-writer.md` | `10-especificacion/pantallas/*` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelizable por lotes de ~10 interfaces. |
 | `agents/logic-spec-writer.md` | `10-especificacion/reglas-catalogo.md`, `estados.md` (**solo `rebuild`**) | Fase 4.5. Necesita `detail.json`. Paralelo con interface-spec-writer. |
 | `agents/backlog-writer.md` | `10-especificacion/backlog.md`, `trazabilidad.md` (**solo `rebuild`**) | Fase 4.5. **Después** de los dos anteriores + `01-funcional.md`. |
@@ -183,11 +183,16 @@ Si `output_preferences.json` tiene `"depth": "onboarding"`, **salta esta fase en
 python scripts/parse_export.py --detail {ruta} --out {salida}/_intermedio/detail.json
 ```
 
-**Paso 4.5.1** — Lanzar **en paralelo** (un único turno):
+**Paso 4.5.1** — Lanzar **en paralelo** (un único turno). Son **tres** agentes: `process-modeler` se re-invoca aquí porque en la Fase 4.2 aún no existía `detail.json`, y es quien conoce los nodos:
 
 ```
 Agent({ ..., prompt: {agents/interface-spec-writer.md} + inputs })   # por lotes de ~10 interfaces
 Agent({ ..., prompt: {agents/logic-spec-writer.md} + inputs })
+Agent({ ..., prompt: {agents/process-modeler.md} + inputs +
+        "MODO: rebuild. Ejecuta SOLO el paso de ficha por nodo: produce
+         10-especificacion/procesos/{PM}-nodos.md por cada process model
+         (process variables + una ficha por CADA nodo del BPMN que ya
+         generaste en la Fase 4.2). NO regeneres los .bpmn/.mmd/.md." })
 ```
 
 **Paso 4.5.2** — Cuando ambos terminan, lanzar `backlog-writer` (necesita las fichas + `01-funcional.md`):
@@ -293,6 +298,15 @@ _doc_generada/
 │   └── ...
 ├── 09-valor-adicional.md
 └── INVENTARIO.md
+
+# Solo con `profundidad: rebuild` (Fase 4.5):
+10-especificacion/
+├── pantallas/{interfaz}.md (una por CADA interfaz) + indice.md
+├── reglas-catalogo.md
+├── estados.md
+├── procesos/{PM}-nodos.md
+├── backlog.md
+└── trazabilidad.md
 ```
 
 Resumen rápido por documento (detalle en `references/analysis-workflow.md`):
@@ -353,7 +367,7 @@ Debe salir **0**. Si sale 1, imprime los objetos que faltan: documéntalos y vue
 ## Resumen — qué hace bien la skill
 
 - **No inventa**: cada hallazgo va con evidencia (ruta + fragmento) y status (✅/🔵/🟡/🔴).
-- **Subagentes especializados**: 6 agentes en `agents/`, 3 en paralelo en Fase 4.
+- **Subagentes especializados**: 9 agentes en `agents/` — 3 en paralelo en Fase 4, 3 mas en Fase 4.5 (modo rebuild) y 2 publishers opcionales.
 - **Iterative Refinement** en diagramas: validar → refinar → re-validar → fallback a tabla.
 - **Progressive disclosure**: SKILL.md sólo orquesta; los detalles están en `references/`.
 - **Degradación elegante**: sin `mmdc`, embebe `.mmd`. Sin `xmllint`, usa Python.

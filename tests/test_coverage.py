@@ -99,6 +99,54 @@ class CoverageTestCase(unittest.TestCase):
 
     # ---------- modo onboarding ----------
 
+    def test_onboarding_inventario_solo_no_cuenta_como_documentado(self):
+        """Regresion (auditoria B1): INVENTARIO.md lista TODOS los objetos por
+        contrato, asi que si cuenta como evidencia el gate no puede fallar nunca.
+        Un export con solo el inventario y cero documentacion debe salir 1."""
+        doc = self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "processModel": [obj("processModel", "DEMO_PM_Aprobar", UUID_IFC)],
+            },
+            {
+                "INVENTARIO.md": (
+                    "# Inventario\n\n"
+                    "## Records\n| `DEMO_RT_Solicitud` | ... |\n"
+                    "## Process Models\n| `DEMO_PM_Aprobar` | ... |\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "onboarding")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_RT_Solicitud", coverage["missing"].get("recordType", []))
+        self.assertIn("DEMO_PM_Aprobar", coverage["missing"].get("processModel", []))
+
+    def test_rebuild_descartado_solo_en_su_propia_fila(self):
+        """Regresion (auditoria B2): una fila DESCARTADO que menciona de pasada a
+        otros objetos no los descarta a ellos. Solo cubre al objeto de la fila."""
+        doc = self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "interface": [
+                    obj("interface", "DEMO_IFC_Vieja", UUID_IFC),
+                    obj("interface", "DEMO_IFC_Nueva", UUID_IFC_2),
+                ],
+            },
+            {
+                "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+                "10-especificacion/trazabilidad.md": (
+                    "| Objeto | Estado |\n|---|---|\n"
+                    "| `DEMO_IFC_Vieja` (interface) | "
+                    "DESCARTADO: obsoleta, su UI paso a DEMO_IFC_Nueva |\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        # La vieja SI queda descartada; la nueva NO puede colarse por la mencion.
+        self.assertIn("DEMO_IFC_Vieja", coverage["types"]["interface"]["discarded"])
+        self.assertIn("DEMO_IFC_Nueva", coverage["missing"].get("interface", []))
+
     def test_onboarding_rt_sin_documentar_exit_1(self):
         """1 RT documentado y 1 sin documentar -> exit 1 y missing exacto."""
         doc = self.make_doc(

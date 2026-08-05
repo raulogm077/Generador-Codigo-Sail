@@ -34,6 +34,21 @@ import argparse
 from typing import List, Tuple
 
 MAX_NODES = 30  # Solo aplica al Tipo A (flowchart sin subgraph).
+MAX_NODES_TYPE_C = 25  # Lanes/BPMN preview (presentation-rules.md).
+# Directivas de estilo validas en cualquier flowchart.
+RE_DIRECTIVE = re.compile(r'^\s*(classDef|class|style|linkStyle|direction)\b')
+# Etiquetas de nodo: [..] (..) {..} y sus formas dobles ((..)) [[..]] {{..}},
+# mas los bordes especiales [/../] [\..\] >..]. Su contenido es texto libre.
+RE_LABEL = re.compile(
+    r'\(\([^)]*\)\)|\[\[[^\]]*\]\]|\{\{[^}]*\}\}'  # formas dobles
+    r'|\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|>[^\]]*\]'  # formas simples
+)
+# Sufijo de clase: Nodo:::miClase
+RE_CLASS_SUFFIX = re.compile(r':::[A-Za-z][A-Za-z0-9_]*')
+# Lo que puede quedar en una linea de flowchart tras quitar etiquetas y clases:
+# identificadores, espacios y los caracteres de los conectores (-->, -.->, ==>,
+# ---, --x, --o, <-->, &). Cualquier otro residuo es basura.
+RE_FLOW_RESIDUE_OK = re.compile(r'^[A-Za-z0-9_\s\-\.=<>xo&|,;:~"\']*$')
 MAX_LABEL_LEN = 50
 ALLOWED_HEADERS = ("flowchart TD", "flowchart LR")
 
@@ -137,15 +152,60 @@ def _validate_er(body: List[str], warnings: List[str]) -> None:
         raise ValueError("erDiagram sin entidades.")
 
 
+def _strip_labels(s: str) -> str:
+    """Quita las etiquetas de nodo con sus delimitadores, respetando anidamiento.
+
+    Mermaid anida delimitadores en las formas especiales: `((x))` circulo,
+    `(((x)))` circulo doble, `[[x]]` subrutina, `{{x}}` hexagono. Una regex
+    tipo `\\(\\([^)]*\\)\\)` casa de forma desbalanceada (`End(((Fin)))` deja
+    el residuo `End)`), asi que se recorre contando profundidad.
+
+    Ojo: `|texto|` de las aristas etiquetadas NO se toca aqui; el residuo
+    permitido ya admite `|`.
+    """
+    PAIRS = {"(": ")", "[": "]", "{": "}"}
+    out: List[str] = []
+    i = 0
+    while i < len(s):
+        ch = s[i]
+        if ch in PAIRS:
+            close = PAIRS[ch]
+            depth = 0
+            j = i
+            while j < len(s):
+                if s[j] == ch:
+                    depth += 1
+                elif s[j] == close:
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            if depth == 0 and j < len(s):
+                i = j + 1  # bloque balanceado: se descarta entero
+                continue
+            # Delimitador sin cerrar: se deja tal cual (lo detecta el residuo).
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _validate_subgraph_lanes(body: List[str], warnings: List[str]) -> None:
     """
-    Valida la estructura de lanes de un flowchart Tipo C: cada `subgraph`
-    debe cerrarse con su `end` (aperturas/cierres emparejados).
-    Lanza ValueError si están desemparejados.
+    Valida un flowchart Tipo C (lanes con `subgraph`):
+      1. Cada `subgraph` se cierra con su `end`.
+      2. Toda línea de contenido es sintácticamente reconocible (nodo, arista,
+         classDef/class/style o comentario) — no basura.
+      3. El número de nodos no supera MAX_NODES_TYPE_C.
+
+    Antes esto era pass-through: solo contaba aperturas/cierres, así que
+    aceptaba cualquier texto entre lanes y diagramas ilegibles de 40 nodos.
     """
     depth = 0
+    node_ids: set = set()
     for ln in body:
         s = ln.strip()
+        if not s or s.startswith("%%"):
+            continue
         if RE_SUBGRAPH_OPEN.match(s):
             depth += 1
             continue
@@ -153,9 +213,26 @@ def _validate_subgraph_lanes(body: List[str], warnings: List[str]) -> None:
             depth -= 1
             if depth < 0:
                 raise ValueError("Tipo C: 'end' sin 'subgraph' abierto.")
+            continue
+        if RE_DIRECTIVE.match(s):
+            continue
+        # Fuera etiquetas y sufijos de clase: su contenido es texto libre.
+        clean = RE_CLASS_SUFFIX.sub("", _strip_labels(s)).strip()
+        if not RE_FLOW_RESIDUE_OK.match(clean):
+            raise ValueError(
+                "Tipo C: línea con sintaxis no reconocida "
+                f"(residuo '{clean}' tras quitar etiquetas): '{s}'."
+            )
+        for m in RE_ID_ONLY.finditer(clean):
+            node_ids.add(m.group(1))
     if depth != 0:
         raise ValueError(
             f"Tipo C: {depth} subgraph(s) sin cerrar con 'end' (lanes desemparejados)."
+        )
+    if len(node_ids) > MAX_NODES_TYPE_C:
+        raise ValueError(
+            f"Tipo C con {len(node_ids)} nodos supera el máximo ({MAX_NODES_TYPE_C}). "
+            "Divide el proceso en subdiagramas o sustituye por tabla."
         )
 
 

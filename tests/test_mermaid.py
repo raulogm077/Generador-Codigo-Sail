@@ -97,6 +97,28 @@ class TestMermaidValidator(unittest.TestCase):
         self.assertIn('subgraph LS["⚙️ Sistema"]', clean)
         self.assertIn("End(((Fin))):::endNode", clean)
 
+    def test_type_c_nodo_huerfano_rechazado(self):
+        """Regresion (auditoria B3): el Tipo C era pass-through — aceptaba
+        cualquier basura mientras los subgraph estuvieran emparejados."""
+        diagrama = "\n".join([
+            "flowchart TD",
+            "  subgraph Solicitante",
+            "    A[Enviar] --> B[Revisar]",
+            "  end",
+            "  ESTO ES SINTAXIS INVALIDA ~~~> ??? |||",
+        ])
+        with self.assertRaises(ValueError):
+            VM.sanitize(diagrama)
+
+    def test_type_c_supera_tope_de_nodos_rechazado(self):
+        """El Tipo C tiene tope documentado (presentation-rules: 25 nodos)."""
+        lineas = ["flowchart TD", "  subgraph Lane"]
+        for i in range(40):
+            lineas.append(f"    N{i}[Paso {i}] --> N{i + 1}[Paso {i + 1}]")
+        lineas.append("  end")
+        with self.assertRaises(ValueError):
+            VM.sanitize("\n".join(lineas))
+
     def test_subgraph_unbalanced_rejected(self):
         bad = (
             "flowchart LR\n"

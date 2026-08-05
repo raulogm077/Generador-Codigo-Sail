@@ -74,6 +74,12 @@ SHEET_REQUIRED = (
 SPEC_DIR_NAME = "10-especificacion"
 TRAZA_FILE_NAME = "trazabilidad.md"
 
+# INVENTARIO.md lista TODOS los objetos del export por contrato (es un catalogo,
+# no documentacion). Si contara como evidencia, cualquier objeto estaria siempre
+# "documentado" y el gate no podria fallar nunca. Se excluye por el mismo motivo
+# que trazabilidad.md en el modo rebuild.
+CATALOG_FILE_NAME = "INVENTARIO.md"
+
 # DESCARTADO: {motivo} — el motivo es obligatorio. En una fila de tabla md el
 # motivo vive en la celda: termina en `|` o fin de linea, y no vale que sea
 # vacio o solo guiones.
@@ -179,14 +185,21 @@ def is_discarded(traza_lines: list[str], name: str | None, uuid: str | None) -> 
     for line in traza_lines:
         if not has_discard_reason(line):
             continue
-        if any(p.search(line) for p in pats):
+        # El objeto debe ser el SUJETO de la fila (primera celda), no aparecer
+        # citado en el motivo: "DESCARTADO: obsoleta, su UI paso a X" descarta
+        # la fila, no a X. Sin esto, una sola fila podia dar por cubiertos a
+        # todos los objetos que nombrara.
+        subject = line.split("|")[1] if line.count("|") >= 2 else line
+        if any(p.search(subject) for p in pats):
             return True
     return False
 
 
 def build_coverage(doc_dir: Path, objects: list[dict[str, Any]], mode: str) -> dict[str, Any]:
     docs = read_markdown(doc_dir)
-    full_blob = "\n".join(text for _, text in docs)
+    full_blob = "\n".join(
+        text for path, text in docs if path.name != CATALOG_FILE_NAME
+    )
     spec_docs = [
         (path, text)
         for path, text in docs

@@ -95,7 +95,7 @@ Alto / Medio / Bajo — [justificación breve, coherente con la tabla de cobertu
 
 Sobre un export real, la skill se considera correcta cuando:
 
-- `check_coverage.py` sale 0 en el modo usado. En `onboarding` eso significa 100% de records, CDTs, process models, integrations, web APIs, groups, constants y **data stores**; en `rebuild`, además, 100% de **interfaces, expression rules, decisions y sites** con ficha propia (o marcados `DESCARTADO: {motivo}` en la matriz de trazabilidad).
+- `check_coverage.py` sale 0 en el modo usado. En `onboarding` eso significa 100% de records, CDTs, process models, integrations, web APIs, groups y **data stores** (las constants se exigen en `rebuild`, donde su valor es parte de la especificacion); en `rebuild`, además, 100% de **interfaces, expression rules, decisions y sites** con ficha propia (o marcados `DESCARTADO: {motivo}` en la matriz de trazabilidad).
 - Genera los 11 entregables y todos los diagramas renderizan o quedan listados como pendientes de render.
 - Cada integración consumida queda documentada con endpoint, método, auth y caller.
 - Cada Web API expuesta queda documentada con URL, método, auth, body, qué dispara y grupos autorizados.
