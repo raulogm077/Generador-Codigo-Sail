@@ -1,7 +1,7 @@
 {
   "name": "appian-toolkit",
   "displayName": "Appian Toolkit",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Generacion, validacion y reingenieria inversa de Appian SAIL: generacion de interfaces (mockup y funcional con Data Fabric), documentacion de apps legacy en dos modos (onboarding y rebuild-spec) y analisis funcional. Sincronizado con Appian 26.x.",
   "author": {
     "name": "Raul Gomez Moya",
