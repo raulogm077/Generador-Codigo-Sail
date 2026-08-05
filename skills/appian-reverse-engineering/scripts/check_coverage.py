@@ -61,6 +61,16 @@ REBUILD_EXTRA = (
     "site",
 )
 
+# De los tipos que exige `rebuild`, estos son artefactos con logica que hay que
+# reconstruir: no basta con citarlos, necesitan FICHA PROPIA (fichero dedicado o
+# cabecera Markdown). Los demas de REBUILD_EXTRA (constant, site) son valores o
+# contenedores: basta con que aparezcan dentro de `10-especificacion/`.
+SHEET_REQUIRED = (
+    "interface",
+    "expressionRule",
+    "decision",
+)
+
 SPEC_DIR_NAME = "10-especificacion"
 TRAZA_FILE_NAME = "trazabilidad.md"
 
@@ -134,6 +144,31 @@ def found_in(blob: str, name: str | None, uuid: str | None) -> bool:
     return False
 
 
+def has_own_sheet(
+    spec_docs: list[tuple[Path, str]], name: str | None, uuid: str | None
+) -> bool:
+    """True si el objeto tiene FICHA PROPIA en 10-especificacion/.
+
+    Ficha propia = un fichero dedicado (su nombre coincide con el del objeto) o
+    una cabecera Markdown que lo nombra (`## rule!X`, `# Pantalla: ... (X)`).
+
+    Una simple mencion NO cuenta: en las fichas los objetos se citan entre si
+    (una pantalla nombra las reglas que invoca, el indice las lista todas), asi
+    que buscar en el texto concatenado daba por documentado cualquier objeto
+    citado de pasada y el gate pasaba en verde sin su ficha.
+    """
+    pats = [word_pattern(t) for t in (name, str(uuid) if uuid else None) if t]
+    if not pats:
+        return False
+    for path, text in spec_docs:
+        if any(p.search(path.stem) for p in pats):
+            return True
+        for line in text.splitlines():
+            if line.lstrip().startswith("#") and any(p.search(line) for p in pats):
+                return True
+    return False
+
+
 def is_discarded(traza_lines: list[str], name: str | None, uuid: str | None) -> bool:
     """True si trazabilidad.md tiene una fila del objeto con DESCARTADO: {motivo}."""
     pats = []
@@ -152,11 +187,12 @@ def is_discarded(traza_lines: list[str], name: str | None, uuid: str | None) -> 
 def build_coverage(doc_dir: Path, objects: list[dict[str, Any]], mode: str) -> dict[str, Any]:
     docs = read_markdown(doc_dir)
     full_blob = "\n".join(text for _, text in docs)
-    spec_blob = "\n".join(
-        text
+    spec_docs = [
+        (path, text)
         for path, text in docs
         if in_spec_dir(path, doc_dir) and path.name != TRAZA_FILE_NAME
-    )
+    ]
+    spec_blob = "\n".join(text for _, text in spec_docs)
     traza_lines: list[str] = []
     for path, text in docs:
         if path.name == TRAZA_FILE_NAME:
@@ -183,7 +219,12 @@ def build_coverage(doc_dir: Path, objects: list[dict[str, Any]], mode: str) -> d
         for o in entries:
             name, uuid = o.get("name"), o.get("uuid")
             if spec_scope:
-                if found_in(spec_blob, name, uuid):
+                covered = (
+                    has_own_sheet(spec_docs, name, uuid)
+                    if obj_type in SHEET_REQUIRED
+                    else found_in(spec_blob, name, uuid)
+                )
+                if covered:
                     documented.append(name)
                 elif is_discarded(traza_lines, name, uuid):
                     discarded.append(name)

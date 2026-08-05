@@ -38,7 +38,16 @@ python skills/appian-sail-generator/scripts/xml_to_appian_recordtype_md.py mi-re
 
 ## 2 · Reingeniería inversa — skill `appian-reverse-engineering`
 
-A partir de un **export de aplicación Appian descomprimido** (formato Haul: `applicationHaul`, `processModelHaul`, `recordTypeHaul`… o el formato antiguo con `application.xml`), produce documentación para que un consultor nuevo entienda la aplicación:
+A partir de un **export de aplicación Appian descomprimido** (formato Haul: `applicationHaul`, `processModelHaul`, `recordTypeHaul`… o el formato antiguo con `application.xml`), produce documentación en **dos niveles de profundidad**:
+
+| Modo | Para qué | Qué añade |
+|---|---|---|
+| `onboarding` *(por defecto)* | Entender la app y hacer onboarding de un consultor nuevo | Los 11 documentos de siempre |
+| `rebuild` | **Reconstruir la app desde cero** con garantías | `10-especificacion/`: ficha de CADA pantalla componente a componente con los predicados exactos (`showWhen`, `required`, validaciones), catálogo del **100%** de expression rules y decisions con su lógica, **máquinas de estados** por entidad, ficha por nodo de cada proceso, **historias de usuario con criterios de aceptación en Gherkin** y matriz de trazabilidad bidireccional |
+
+Ninguna ejecución se cierra "en verde" sin pasar un **gate de cobertura calculado** (`check_coverage.py`): si un objeto del export no está documentado, el gate falla y lo nombra. En modo `rebuild`, para pantallas y reglas no basta con mencionarlas — exige ficha propia.
+
+En ambos modos:
 
 - **11 documentos Markdown**: funcional, arquitectura, modelo de datos, seguridad y grupos, integraciones consumidas, APIs expuestas, batches, BPMN por process model, valor adicional/riesgos, inventario y resumen ejecutivo.
 - **Diagramas**: BPMN 2.0 validado por process model, modelo ER en SVG, mapa de integraciones.

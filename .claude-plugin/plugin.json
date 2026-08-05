@@ -1,8 +1,8 @@
 {
   "name": "appian-toolkit",
   "displayName": "Appian Toolkit",
-  "version": "2.4.0",
-  "description": "Generacion, validacion y reingenieria inversa de Appian SAIL: skills de generacion y documentacion mas los subagentes validadores y transformadores. Sincronizado con Appian 26.x (interfaces y Data Fabric).",
+  "version": "2.5.0",
+  "description": "Generacion, validacion y reingenieria inversa de Appian SAIL: generacion de interfaces (mockup y funcional con Data Fabric), documentacion de apps legacy en dos modos (onboarding y rebuild-spec) y analisis funcional. Sincronizado con Appian 26.x.",
   "author": {
     "name": "Raul Gomez Moya",
     "email": "raulogm07@gmail.com"
@@ -10,5 +10,12 @@
   "homepage": "https://github.com/raulogm077/Appian-Toolkit",
   "repository": "https://github.com/raulogm077/Appian-Toolkit",
   "license": "UNLICENSED",
-  "keywords": ["appian", "sail", "bpm", "low-code", "analisis-funcional", "data-fabric"]
+  "keywords": [
+    "appian",
+    "sail",
+    "bpm",
+    "low-code",
+    "analisis-funcional",
+    "data-fabric"
+  ]
 }

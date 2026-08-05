@@ -39,6 +39,7 @@ SCRIPT = (
 UUID_RT_1 = "00000000-0000-0000-0000-000000000101"
 UUID_RT_2 = "00000000-0000-0000-0000-000000000102"
 UUID_IFC = "00000000-0000-0000-0000-000000000201"
+UUID_IFC_2 = "00000000-0000-0000-0000-000000000202"
 UUID_ER = "00000000-0000-0000-0000-000000000301"
 
 
@@ -229,6 +230,60 @@ class CoverageTestCase(unittest.TestCase):
                 "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
                 "10-especificacion/pantallas/DEMO_IFC_Form.md": (
                     "# Pantalla: Formulario (`DEMO_IFC_Form`)\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(coverage["missing"], {})
+
+    def test_rebuild_mencion_cruzada_no_cuenta_como_ficha(self):
+        """Regresion: una interfaz SOLO mencionada por otras fichas no esta documentada.
+
+        Antes, `spec_blob` concatenaba todos los .md de 10-especificacion/, asi que
+        bastaba con que el indice o la ficha de otra pantalla la nombraran para darla
+        por cubierta — el gate pasaba en verde sin su ficha.
+        """
+        doc = self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "interface": [
+                    obj("interface", "DEMO_IFC_Form", UUID_IFC),
+                    obj("interface", "DEMO_IFC_List", UUID_IFC_2),
+                ],
+            },
+            {
+                "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+                # Form SI tiene ficha propia, y menciona a List (la invoca).
+                "10-especificacion/pantallas/DEMO_IFC_Form.md": (
+                    "# Pantalla: Formulario (`DEMO_IFC_Form`)\n"
+                    "\n## Reglas invocadas\n"
+                    "| `DEMO_IFC_List` | listado embebido |\n"
+                ),
+                # El indice tambien la nombra, pero eso no es una ficha.
+                "10-especificacion/pantallas/indice.md": (
+                    "# Indice\n\n| Pantalla |\n| `DEMO_IFC_Form` |\n| `DEMO_IFC_List` |\n"
+                ),
+            },
+        )
+        proc, coverage = self.run_gate(doc, "rebuild")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("DEMO_IFC_List", coverage["missing"].get("interface", []))
+        self.assertNotIn("DEMO_IFC_Form", coverage["missing"].get("interface", []))
+
+    def test_rebuild_ficha_por_cabecera_cuenta(self):
+        """Una rule con su seccion `## rule!X` en reglas-catalogo.md SI esta documentada."""
+        doc = self.make_doc(
+            {
+                "recordType": [obj("recordType", "DEMO_RT_Solicitud", UUID_RT_1)],
+                "expressionRule": [obj("expressionRule", "DEMO_VAL_Importe", UUID_IFC)],
+            },
+            {
+                "03-modelo-datos.md": "`DEMO_RT_Solicitud`\n",
+                "10-especificacion/reglas-catalogo.md": (
+                    "# Catalogo de reglas\n\n"
+                    "## rule!DEMO_VAL_Importe\n"
+                    "**Firma**: importe -> Text\n"
                 ),
             },
         )
