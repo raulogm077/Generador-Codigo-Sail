@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<siteHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000083</versionUuid>
+  <site name="DEMO_SITE_Solicitudes" uuid="00000000-0000-0000-0000-000000000017">
+    <description>Sitio de trabajo de los solicitantes y aprobadores.</description>
+    <urlStub>demo-solicitudes</urlStub>
+    <visibilityGroup>DEMO_GRP_Aprobadores</visibilityGroup>
+    <pages>
+      <page name="Solicitudes" type="RECORD_LIST" urlStub="solicitudes"
+            objectUuid="00000000-0000-0000-0000-000000000011">
+        <description>Listado de registros: urn:appian:record-type:v1:00000000-0000-0000-0000-000000000011</description>
+      </page>
+      <page name="Nueva solicitud" type="INTERFACE" urlStub="nueva"
+            objectUuid="00000000-0000-0000-0000-000000000001">
+        <description>Formulario de alta.</description>
+      </page>
+    </pages>
+  </site>
+</siteHaul>

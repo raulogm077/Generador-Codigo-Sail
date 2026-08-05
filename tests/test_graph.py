@@ -65,6 +65,50 @@ class TestGraph(unittest.TestCase):
             self.edges_with_type(),
         )
 
+    # --- I5: aristas REALES de los 5 patrones que solo tenian test de regex.
+    # Las hospeda DEMO_PM_ReintentarEnvios (namespaced a proposito, ver M6).
+
+    def test_query_entity_edge(self):
+        self.assertIn(
+            ("DEMO_PM_ReintentarEnvios", "DEMO_CONS_ENTITY_SOLICITUD", "queryEntity"),
+            self.edges_with_type(),
+        )
+
+    def test_write_entity_edge(self):
+        self.assertIn(
+            ("DEMO_PM_ReintentarEnvios", "DEMO_CONS_ENTITY_SOLICITUD", "writeEntity"),
+            self.edges_with_type(),
+        )
+
+    def test_write_records_edge(self):
+        self.assertIn(
+            ("DEMO_PM_ReintentarEnvios", "DEMO Solicitud", "writeRecords"),
+            self.edges_with_type(),
+        )
+
+    def test_subprocess_edge(self):
+        """<a:processModelUuid> CON prefijo de namespace: si el parser no lo
+        tolerase (M6), esta arista no existiria."""
+        self.assertIn(
+            ("DEMO_PM_ReintentarEnvios", "DEMO_PM_AprobarSolicitud", "subprocess"),
+            self.edges_with_type(),
+        )
+
+    def test_member_of_group_edge(self):
+        self.assertIn(
+            ("DEMO_PM_ReintentarEnvios", "DEMO_GRP_Aprobadores", "security"),
+            self.edges_with_type(),
+        )
+
+    def test_site_record_list_edge(self):
+        self.assertIn(("DEMO_SITE_Solicitudes", "DEMO Solicitud"), self.edges())
+
+    def test_pm_invocado_como_subproceso_ya_no_es_huerfano(self):
+        self.assertNotIn("DEMO_PM_AprobarSolicitud", self.graph["orphans"])
+
+    def test_grupo_referenciado_ya_no_es_huerfano(self):
+        self.assertNotIn("DEMO_GRP_Aprobadores", self.graph["orphans"])
+
 
 class TestParserRobustness(unittest.TestCase):
     """M5 y M6: huerfanos completos y tags con prefijo de namespace."""

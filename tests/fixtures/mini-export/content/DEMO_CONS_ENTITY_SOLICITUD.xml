@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contentHaul>
+  <versionUuid>00000000-0000-0000-0000-000000000085</versionUuid>
+  <constant name="DEMO_CONS_ENTITY_SOLICITUD" uuid="00000000-0000-0000-0000-000000000015">
+    <description>Entidad del data store principal para la tabla de solicitudes. La usan los nodos batch para consultar y escribir.</description>
+    <typeRef>Data Store Entity</typeRef>
+    <value>DEMO_DS_Principal.solicitud</value>
+  </constant>
+</contentHaul>

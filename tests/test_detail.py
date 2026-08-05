@@ -75,6 +75,37 @@ class TestDetail(unittest.TestCase):
         self.assertIn("sites", self.detail)
         self.assertIsInstance(self.detail["sites"], dict)
 
+    def test_site_con_sus_paginas(self):
+        site = self.detail["sites"]["DEMO_SITE_Solicitudes"]
+        paginas = {p["name"]: p for p in site["pages"]}
+        self.assertEqual(len(paginas), 2)
+        self.assertEqual(paginas["Solicitudes"]["type"], "RECORD_LIST")
+        # El objeto destino se resuelve de UUID a nombre tecnico.
+        self.assertEqual(paginas["Solicitudes"]["target"], "DEMO Solicitud")
+        self.assertEqual(paginas["Nueva solicitud"]["target"], "DEMO_IFC_SolicitudForm")
+
+    # --- I5/M6: el PM batch con prefijo de namespace ---
+
+    def test_pm_con_namespace_se_parsea(self):
+        """Si faltara el xmlns:a, ET.parse fallaria y el PM desapareceria del
+        inventario EN SILENCIO (parseErrors lo delata)."""
+        inv = json.loads((self.out / "inventory.json").read_text(encoding="utf-8"))
+        self.assertEqual(inv["parseErrors"], 0)
+        pm = self.detail["processModels"]["DEMO_PM_ReintentarEnvios"]
+        self.assertEqual(len(pm["nodes"]), 7)
+        b1 = next(n for n in pm["nodes"] if n["id"] == "b1")
+        self.assertIn("a!queryEntity", b1.get("expressionSummary") or "")
+
+    def test_batch_pm_es_timer_con_recurrence(self):
+        inv = json.loads((self.out / "inventory.json").read_text(encoding="utf-8"))
+        pm = next(
+            o for o in inv["objects"]["processModel"]
+            if o["name"] == "DEMO_PM_ReintentarEnvios"
+        )
+        self.assertEqual(pm["startType"], "timer")
+        self.assertTrue(pm.get("hasRecurrence"))
+        self.assertEqual(pm["subProcessCount"], 1)
+
     def test_pm_process_variables(self):
         pm = self.detail["processModels"]["DEMO_PM_AprobarSolicitud"]
         self.assertTrue(any(pv["name"] == "solicitud" for pv in pm["processVariables"]))

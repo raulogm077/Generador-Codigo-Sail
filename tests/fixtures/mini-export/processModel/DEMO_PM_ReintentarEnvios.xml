@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Batch nocturno. Usa PREFIJO DE NAMESPACE a proposito: los exports Haul
+     reales lo llevan y el parser debe tolerarlo (regresion de M6). El xmlns:a
+     DEBE estar declarado o ET.parse falla y el objeto desaparece del
+     inventario en silencio. -->
+<a:processModelHaul xmlns:a="http://www.appian.com/ae/types/2009">
+  <a:versionUuid>00000000-0000-0000-0000-000000000084</a:versionUuid>
+  <a:processModel uuid="00000000-0000-0000-0000-000000000016">
+    <a:meta>
+      <a:name>
+        <a:pair><a:locale lang="es"/><a:value>DEMO_PM_ReintentarEnvios</a:value></a:pair>
+      </a:name>
+      <a:description>
+        <a:pair><a:locale lang="es"/><a:value>Batch nocturno: reintenta el envio al ERP de las solicitudes aprobadas que fallaron.</a:value></a:pair>
+      </a:description>
+    </a:meta>
+    <a:processVariables>
+      <a:variable name="pendientes" type="DEMO_CDT_Solicitud" parameter="false"/>
+      <a:variable name="reintentos" type="Number (Integer)" parameter="false"/>
+    </a:processVariables>
+    <a:nodes>
+      <a:node type="start" name="Inicio programado" id="b0">
+        <a:startType>timer</a:startType>
+        <a:recurrence>FREQ=DAILY;BYHOUR=2;BYMINUTE=0</a:recurrence>
+      </a:node>
+      <a:node type="script" name="Leer solicitudes pendientes" id="b1">
+        <a:expression><![CDATA[pv!pendientes: a!queryEntity(
+  entity: cons!DEMO_CONS_ENTITY_SOLICITUD,
+  query: a!query(
+    filter: a!queryFilter(field: "estado", operator: "=", value: "APROBADO"),
+    pagingInfo: a!pagingInfo(startIndex: 1, batchSize: 500)
+  )
+).data]]></a:expression>
+      </a:node>
+      <a:node type="gateway" name="Ejecutor autorizado?" id="b2">
+        <a:condition><![CDATA[a!isUserMemberOfGroup(username: loggedInUser(), groups: cons!DEMO_GRP_Aprobadores)]]></a:condition>
+      </a:node>
+      <a:node type="subProcess" name="Reprocesar aprobacion" id="b3">
+        <a:processModelUuid>00000000-0000-0000-0000-000000000009</a:processModelUuid>
+      </a:node>
+      <a:node type="script" name="Guardar resultado del reintento" id="b4">
+        <a:expression><![CDATA[a!writeToDataStoreEntity(
+  dataStoreEntity: cons!DEMO_CONS_ENTITY_SOLICITUD,
+  valueToStore: pv!pendientes
+)]]></a:expression>
+      </a:node>
+      <a:node type="script" name="Sincronizar registros" id="b5">
+        <a:expression><![CDATA[a!writeRecords(
+  records: 'recordType!{00000000-0000-0000-0000-000000000011}DEMO Solicitud'()
+)]]></a:expression>
+      </a:node>
+      <a:node type="end" name="Fin" id="b6"/>
+    </a:nodes>
+    <a:flows>
+      <a:flow from="b0" to="b1"/>
+      <a:flow from="b1" to="b2"/>
+      <a:flow from="b2" to="b3"/>
+      <a:flow from="b3" to="b4"/>
+      <a:flow from="b4" to="b5"/>
+      <a:flow from="b5" to="b6"/>
+    </a:flows>
+  </a:processModel>
+</a:processModelHaul>

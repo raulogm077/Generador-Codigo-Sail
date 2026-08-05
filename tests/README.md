@@ -2,9 +2,12 @@
 
 ## `fixtures/mini-export/` — export Appian sintético
 
-Export mínimo en formato *Haul* real (13 objetos, 15 ficheros) usado por todos los tests
+Export mínimo en formato *Haul* real (**18 objetos, 18 ficheros**) usado por todos los tests
 de la skill `appian-reverse-engineering`. **100% sintético**: nombres `DEMO_*`, UUIDs
 `00000000-0000-0000-0000-0000000000NN`. Cero datos reales.
+
+Grafo resultante: **18 nodos · 14 aristas · 7 huérfanos** (los huérfanos son entry points
+legítimos: application, site, web API, batch…).
 
 | Objeto | Fichero | Papel en los tests |
 |---|---|---|
@@ -17,7 +20,14 @@ de la skill `appian-reverse-engineering`. **100% sintético**: nombres `DEMO_*`,
 | Constant `DEMO_CONS_ESTADOS` | `content/…` | dominio `BORRADOR;ENVIADO;APROBADO;RECHAZADO` (máquina de estados) |
 | Integration + CS + Web API | `content/…`, `connectedSystem/…` | borde de la app |
 | PM `DEMO_PM_AprobarSolicitud` | `processModel/…` | 7 nodos, 3 process variables, gateway por importe |
-| Record Type + CDT + Data Store | `recordType/…`, `datatype/…`, `dataStore/…` | el data store NO lo inventaría el parser actual (lo habilita la Task 3 del plan) |
+| Record Type + CDT + Data Store | `recordType/…`, `datatype/…`, `dataStore/…` | el data store se inventaría desde la Task 3 (`test_detail.py::test_datastore_inventoried`) |
+| Constant `DEMO_CONS_ENTITY_SOLICITUD` | `content/…` | entidad de data store: sin ella, `a!queryEntity`/`a!writeToDataStoreEntity` no resolverían contra nada y no habría arista |
+| PM `DEMO_PM_ReintentarEnvios` | `processModel/…` | batch nocturno **con prefijo de namespace a propósito** (regresión de M6). Hospeda 5 patrones sin cobertura previa: `a!queryEntity`, `a!writeToDataStoreEntity`, `a!writeRecords`, `<a:processModelUuid>` (subproceso) y `a!isUserMemberOfGroup` |
+| Site `DEMO_SITE_Solicitudes` | `site/…` | 2 páginas (RECORD_LIST + INTERFACE). `siteHaul` no tenía cobertura y `site` es un tipo requerido en modo rebuild |
+
+> ⚠️ Al tocar el PM namespaced: el `xmlns:a` **debe** estar declarado en la raíz o
+> `ET.parse` falla, `safe_parse` devuelve `None` y el objeto desaparece del inventario
+> sin error visible. `test_pm_con_namespace_se_parsea` asserta `parseErrors == 0`.
 
 Regenerable de forma determinista (el generador vive fuera del repo; el fixture es la fuente de verdad).
 
