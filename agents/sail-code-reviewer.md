@@ -790,8 +790,9 @@ Before marking any validation category as ✅, you MUST:
 ### Project Settings Checkpoint — .claude/appian-toolkit.local.md
 
 - [ ] Checked whether `<working-dir>/.claude/appian-toolkit.local.md` exists (skip silently if not)
-- [ ] If it exists and frontmatter has `ai_components_available: false`: Grep the .sail file for `a!chatField|a!chatMessage|a!callLanguageModel|a!agentChatField` — any hit is a **blocking error** ("AI component used but the project declares the AI tier unavailable")
-- [ ] If frontmatter has `brand_hex`: flag `"ACCENT"` used where the project's brand color was expected (buttons, tags, tab highlight, stamps) as a warning
+- [ ] If it exists, checked `enabled` **first**: `enabled: false` → skip this whole checkpoint and every check below it, exactly as if the file were absent. It is the project's off switch for the whole toolkit; enforcing a blocking error from a file the project has switched off is the worst way to break it.
+- [ ] If enabled and frontmatter has `ai_components_available: false`: Grep the .sail file for `a!chatField|a!chatMessage|a!callLanguageModel|a!agentChatField` — any hit is a **blocking error** ("AI component used but the project declares the AI tier unavailable")
+- [ ] If enabled and frontmatter has `brand_hex`: flag `"ACCENT"` used where the project's brand color was expected (buttons, tags, tab highlight, stamps) as a warning
 
 ---
 

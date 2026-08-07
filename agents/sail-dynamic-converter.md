@@ -274,7 +274,12 @@ a!gridField(
 
 ### Step 0.1: Read Per-Project Settings (if present)
 
-Check `<working-dir>/.claude/appian-toolkit.local.md`. If it exists, honor its frontmatter during conversion:
+Check `<working-dir>/.claude/appian-toolkit.local.md`.
+
+1. **If it does not exist** → use the defaults below silently. Never ask the user to create it.
+2. **If it exists but its frontmatter has `enabled: false`** → ignore the file **entirely** and use the defaults, exactly as if it were absent. `enabled: false` is the project's off switch for the whole toolkit; honoring any other field while it is false makes the switch a lie. Do not read the markdown body either.
+3. **Otherwise**, honor its frontmatter during conversion:
+
 - `data_model_context`: path of the data-model markdown (default `context/data-model-context.md`).
 - `output_dir`: where `[name]-functional.sail` is written (default `output`).
 - `prefer_native_kpis: true` (default): convert card KPIs to `a!kpiField` when the decision rule in `/conversion-guidelines/display-conversion-kpis.md` § Pattern 0 allows it; state the choice in the summary.

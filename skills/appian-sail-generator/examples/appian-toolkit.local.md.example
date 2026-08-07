@@ -1,6 +1,15 @@
 ---
-# Copy this file to <project>/.claude/appian-toolkit.local.md and adjust.
+# Copy this file to <project>/.claude/appian-toolkit.local.md and adjust,
+# then add `.claude/*.local.md` to that project's .gitignore.
+#
 # All fields are optional — delete any line to fall back to its default.
+# The authoritative schema (every field, effect and default) is the table in
+# ../SKILL.md § "Per-project settings". This template is a convenience copy:
+# if the two ever disagree, the table wins.
+
+# false → the WHOLE toolkit ignores this file, frontmatter and body alike,
+# exactly as if it did not exist. Applies to the generator, the converter,
+# the code reviewer and the reverse-engineering skill.
 enabled: true
 
 # Corporate palette (HEX, never "ACCENT"). A reference image in the request still wins.
