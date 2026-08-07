@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from zipfile import ZipFile
@@ -49,49 +50,79 @@ def friendly_type(type_text: str) -> str:
     return TYPE_MAP.get(t, t)
 
 
+def strip_ns(tag: str) -> str:
+    """`{http://…}field` -> `field`. Los exports reales van con namespace y los
+    XML de ejemplo casi nunca; buscar por tag literal se come unos u otros."""
+    return tag.rsplit("}", 1)[-1]
+
+
+def iter_tag(root, *tags: str):
+    """Descendientes cuyo tag, sin namespace, esta en `tags`."""
+    wanted = set(tags)
+    for el in root.iter():
+        if strip_ns(el.tag) in wanted:
+            yield el
+
+
+def attr_any(el, *names: str) -> str:
+    """Atributo por nombre, ignorando el namespace del atributo."""
+    for n in names:
+        for key, value in el.attrib.items():
+            if strip_ns(key) == n and (value or "").strip():
+                return value.strip()
+    return ""
+
+
+def child_text(el, *names: str) -> str:
+    """Texto de un hijo directo por nombre, ignorando namespace."""
+    for n in names:
+        for child in el:
+            if strip_ns(child.tag) == n and (child.text or "").strip():
+                return child.text.strip()
+    return ""
+
+
 def parse_recordtype_from_file(file_obj) -> dict:
     """Parse record type from a file object or path."""
     tree = ET.parse(file_obj)
     root = tree.getroot()
 
-    rt = root.find("recordType")
+    rt = next((el for el in root.iter() if strip_ns(el.tag) == "recordType"), None)
     if rt is None:
         raise ValueError("No <recordType> found in XML")
 
-    rt_uuid = rt.attrib.get(f"{{{A_NS}}}uuid") or rt.attrib.get("uuid") or ""
-    rt_name = rt.attrib.get("name") or ""
+    rt_uuid = attr_any(rt, "uuid")
+    rt_name = attr_any(rt, "name")
 
-    desc_el = rt.find("a:description", namespaces=NS)
-    desc = (desc_el.text or "").strip() if desc_el is not None else ""
+    desc = child_text(rt, "description")
 
+    # Ver la nota en xml_to_appian_recordtype_md.py: en un export real los datos
+    # del campo son elementos hijos; en XML simplificados, atributos. Se lee el
+    # hijo primero y el atributo como respaldo.
     fields = []
-    for f in rt.findall(".//field"):
-        fname = (f.findtext("fieldName") or "").strip()
-        fuuid = (f.findtext("uuid") or "").strip()
-        ftype = friendly_type(f.findtext("type") or "")
+    for f in iter_tag(rt, "field"):
+        fname = child_text(f, "fieldName", "name") or attr_any(f, "name", "fieldName")
+        fuuid = child_text(f, "uuid") or attr_any(f, "uuid")
+        ftype = friendly_type(
+            child_text(f, "type", "sourceFieldType") or attr_any(f, "type")
+        )
         if fname and fuuid:
             fields.append({"name": fname, "uuid": fuuid, "type": ftype})
 
     rels = []
-    for rcfg in rt.findall(".//a:recordRelationshipCfg", namespaces=NS):
-        ruuid = (rcfg.findtext("uuid") or "").strip()
-        rname = (rcfg.findtext("relationshipName") or "").strip()
-        raw = (rcfg.findtext("relationshipType") or "").strip()
+    for rcfg in iter_tag(rt, "recordRelationshipCfg", "relationship"):
+        ruuid = child_text(rcfg, "uuid") or attr_any(rcfg, "uuid")
+        rname = child_text(rcfg, "relationshipName") or attr_any(rcfg, "name", "relationshipName")
+        raw = child_text(rcfg, "relationshipType") or attr_any(rcfg, "type", "relationshipType")
         rtype = REL_MAP.get(raw, raw.lower().replace("_", "-"))
         if ruuid and rname:
             rels.append({"name": rname, "uuid": ruuid, "type": rtype})
 
     actions = []
-    act_cfgs = rt.findall(".//a:recordListActionCfg", namespaces=NS) + rt.findall(
-        ".//a:relatedActionCfg", namespaces=NS
-    )
-    for ac in act_cfgs:
-        auuid = ac.attrib.get(f"{{{A_NS}}}uuid") or ""
-        akey = (ac.findtext("a:referenceKey", default="", namespaces=NS) or "").strip()
-        title = (
-            (ac.findtext("a:staticTitle", default="", namespaces=NS) or "")
-            or (ac.findtext("a:staticTitleString", default="", namespaces=NS) or "")
-        ).strip()
+    for ac in iter_tag(rt, "recordListActionCfg", "relatedActionCfg"):
+        auuid = attr_any(ac, "uuid") or child_text(ac, "uuid")
+        akey = child_text(ac, "referenceKey") or attr_any(ac, "referenceKey")
+        title = child_text(ac, "staticTitle", "staticTitleString") or attr_any(ac, "name")
 
         if auuid and akey:
             actions.append({"name": title or akey, "uuid": auuid, "key": akey})
@@ -171,12 +202,17 @@ def process_directory(in_dir: Path, out_dir: Path) -> int:
     xml_files = sorted(in_dir.glob("*.xml"))
     if not xml_files:
         print(f"No .xml files found in: {in_dir}")
-        return 0
+        return 0, []
 
+    empty: list[str] = []
     count_ok = 0
     for xml_path in xml_files:
         try:
             rt = parse_recordtype_from_file(xml_path)
+            if not rt["fields"]:
+                print(f"VACIO: {xml_path.name}: 0 campos legibles, no se escribe")
+                empty.append(xml_path.name)
+                continue
             name_snake = to_snake_case(rt["name"])
             out_name = f"data-model-context-{name_snake}.md"
             out_path = out_dir / out_name
@@ -189,14 +225,16 @@ def process_directory(in_dir: Path, out_dir: Path) -> int:
             count_ok += 1
         except Exception as e:
             print(f"FAIL: {xml_path.name}: {e}")
+            empty.append(xml_path.name)
 
-    return count_ok
+    return count_ok, empty
 
 
 def process_zip(zip_path: Path, internal_folder: str, out_dir: Path) -> int:
     """Process XML files from within a zip archive."""
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    empty: list[str] = []
     count_ok = 0
     with ZipFile(zip_path, 'r') as zf:
         # Normalize the internal folder path
@@ -212,12 +250,16 @@ def process_zip(zip_path: Path, internal_folder: str, out_dir: Path) -> int:
 
         if not xml_files:
             print(f"No .xml files found in zip folder: {folder or '(root)'}")
-            return 0
+            return 0, []
 
         for xml_name in xml_files:
             try:
                 with zf.open(xml_name) as xml_file:
                     rt = parse_recordtype_from_file(BytesIO(xml_file.read()))
+                    if not rt["fields"]:
+                        print(f"VACIO: {xml_name}: 0 campos legibles, no se escribe")
+                        empty.append(xml_name)
+                        continue
                     name_snake = to_snake_case(rt["name"])
                     out_name = f"data-model-context-{name_snake}.md"
                     out_path = out_dir / out_name
@@ -230,8 +272,9 @@ def process_zip(zip_path: Path, internal_folder: str, out_dir: Path) -> int:
                     count_ok += 1
             except Exception as e:
                 print(f"FAIL: {xml_name}: {e}")
+                empty.append(xml_name)
 
-    return count_ok
+    return count_ok, empty
 
 
 def main() -> int:
@@ -264,16 +307,35 @@ def main() -> int:
             raise SystemExit(f"Zip file does not exist: {input_path}")
 
         out_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else Path.cwd()
-        processed = process_zip(input_path, args.folder, out_dir)
+        processed, empty = process_zip(input_path, args.folder, out_dir)
     else:
         # Regular directory
         if not input_path.exists() or not input_path.is_dir():
             raise SystemExit(f"Input directory does not exist or is not a directory: {input_path}")
 
         out_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else input_path
-        processed = process_directory(input_path, out_dir)
+        processed, empty = process_directory(input_path, out_dir)
 
     print(f"Processed: {processed} file(s)")
+
+    # El lote no se aborta a medias — los XML buenos se escriben igual — pero si
+    # alguno se ha quedado sin campos hay que salir en rojo. Con exit 0 el fallo
+    # se pierde entre las lineas OK y luego la Fase 2 trabaja con un modelo
+    # incompleto sin que nadie se haya enterado.
+    if empty:
+        print(
+            f"\nERROR: {len(empty)} fichero(s) sin campos legibles, no escritos:",
+            file=sys.stderr,
+        )
+        for name in empty:
+            print(f"  - {name}", file=sys.stderr)
+        print(
+            "  Se buscaron <field> con hijos <fieldName>/<uuid>/<type> y esos\n"
+            "  mismos datos como atributos. Revisa que sean recordTypeHaul.",
+            file=sys.stderr,
+        )
+        return 1
+
     return 0
 
 

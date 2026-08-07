@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 A_NS = "http://www.appian.com/ae/types/2009"
@@ -47,48 +48,80 @@ def friendly_type(type_text: str) -> str:
     return TYPE_MAP.get(t, t)
 
 
+def strip_ns(tag: str) -> str:
+    """`{http://…}field` -> `field`. Los exports reales van con namespace y los
+    XML de ejemplo casi nunca; buscar por tag literal se come unos u otros."""
+    return tag.rsplit("}", 1)[-1]
+
+
+def iter_tag(root, *tags: str):
+    """Descendientes cuyo tag, sin namespace, esta en `tags`."""
+    wanted = set(tags)
+    for el in root.iter():
+        if strip_ns(el.tag) in wanted:
+            yield el
+
+
+def attr_any(el, *names: str) -> str:
+    """Atributo por nombre, ignorando el namespace del atributo."""
+    for n in names:
+        for key, value in el.attrib.items():
+            if strip_ns(key) == n and (value or "").strip():
+                return value.strip()
+    return ""
+
+
+def child_text(el, *names: str) -> str:
+    """Texto de un hijo directo por nombre, ignorando namespace."""
+    for n in names:
+        for child in el:
+            if strip_ns(child.tag) == n and (child.text or "").strip():
+                return child.text.strip()
+    return ""
+
+
 def parse_recordtype(xml_path: str) -> dict:
     tree = ET.parse(xml_path)
     root = tree.getroot()
 
-    rt = root.find("recordType")
+    rt = next((el for el in root.iter() if strip_ns(el.tag) == "recordType"), None)
     if rt is None:
         raise ValueError("No <recordType> found. Expected an Appian recordTypeHaul XML.")
 
-    rt_uuid = rt.attrib.get(f"{{{A_NS}}}uuid") or rt.attrib.get("uuid")
-    rt_name = rt.attrib.get("name") or ""
+    rt_uuid = attr_any(rt, "uuid")
+    rt_name = attr_any(rt, "name")
 
-    desc_el = rt.find("a:description", namespaces=NS)
-    desc = (desc_el.text or "").strip() if desc_el is not None else ""
+    desc = child_text(rt, "description")
 
+    # En un export real los datos del campo son elementos hijos (<fieldName>,
+    # <uuid>, <type>); en XML simplificados o escritos a mano son atributos.
+    # Se lee primero el hijo — el formato real manda — y el atributo como
+    # respaldo. Es la misma leccion que ya aprendio parse_export.py de la skill
+    # de reingenieria inversa; alli lo pago con 354 campos leidos como `null`.
     fields = []
-    for f in rt.findall(".//field"):
-        fname = (f.findtext("fieldName") or "").strip()
-        fuuid = (f.findtext("uuid") or "").strip()
-        ftype = friendly_type(f.findtext("type") or "")
+    for f in iter_tag(rt, "field"):
+        fname = child_text(f, "fieldName", "name") or attr_any(f, "name", "fieldName")
+        fuuid = child_text(f, "uuid") or attr_any(f, "uuid")
+        ftype = friendly_type(
+            child_text(f, "type", "sourceFieldType") or attr_any(f, "type")
+        )
         if fname and fuuid:
             fields.append({"name": fname, "uuid": fuuid, "type": ftype})
 
     rels = []
-    for rcfg in rt.findall(".//a:recordRelationshipCfg", namespaces=NS):
-        ruuid = (rcfg.findtext("uuid") or "").strip()
-        rname = (rcfg.findtext("relationshipName") or "").strip()
-        raw = (rcfg.findtext("relationshipType") or "").strip()
+    for rcfg in iter_tag(rt, "recordRelationshipCfg", "relationship"):
+        ruuid = child_text(rcfg, "uuid") or attr_any(rcfg, "uuid")
+        rname = child_text(rcfg, "relationshipName") or attr_any(rcfg, "name", "relationshipName")
+        raw = child_text(rcfg, "relationshipType") or attr_any(rcfg, "type", "relationshipType")
         rtype = REL_MAP.get(raw, raw.lower().replace("_", "-"))
         if ruuid and rname:
             rels.append({"name": rname, "uuid": ruuid, "type": rtype})
 
     actions = []
-    act_cfgs = rt.findall(".//a:recordListActionCfg", namespaces=NS) + rt.findall(
-        ".//a:relatedActionCfg", namespaces=NS
-    )
-    for ac in act_cfgs:
-        auuid = ac.attrib.get(f"{{{A_NS}}}uuid") or ""
-        akey = (ac.findtext("a:referenceKey", default="", namespaces=NS) or "").strip()
-        title = (
-            (ac.findtext("a:staticTitle", default="", namespaces=NS) or "")
-            or (ac.findtext("a:staticTitleString", default="", namespaces=NS) or "")
-        ).strip()
+    for ac in iter_tag(rt, "recordListActionCfg", "relatedActionCfg"):
+        auuid = attr_any(ac, "uuid") or child_text(ac, "uuid")
+        akey = child_text(ac, "referenceKey") or attr_any(ac, "referenceKey")
+        title = child_text(ac, "staticTitle", "staticTitleString") or attr_any(ac, "name")
 
         if auuid and akey:
             actions.append({"name": title or akey, "uuid": auuid, "key": akey})
@@ -178,6 +211,22 @@ def main() -> int:
     args = ap.parse_args()
 
     rt = parse_recordtype(args.xml)
+
+    # Sin campos no hay contexto de modelo de datos, y un fichero bien formado
+    # con la tabla vacia es peor que ningun fichero: la Fase 2 lo lee, no ve
+    # campos y no tiene forma de saber si el record type es asi o si el parseo
+    # fallo. Se aborta sin escribir.
+    if not rt["fields"]:
+        print(
+            f"ERROR: no se ha leido ningun campo de {args.xml}.\n"
+            "  Se buscaron elementos <field> con hijos <fieldName>/<uuid>/<type>\n"
+            "  (formato de export real) y con esos mismos datos como atributos.\n"
+            "  Si el XML no es un recordTypeHaul de Appian, este no es el script.\n"
+            "  No se ha escrito nada: un data-model-context vacio se lee como\n"
+            "  'este record type no tiene campos' y eso es mentira.",
+            file=sys.stderr,
+        )
+        return 1
 
     title = args.title or f"{rt['name']} Record Type Context Reference"
     md = render_markdown(rt, title)
