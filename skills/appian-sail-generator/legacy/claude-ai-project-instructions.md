@@ -1,4 +1,22 @@
-# PROJECT INSTRUCTIONS - SAIL UI GENERATION
+> ⚠️ **LEGACY — NOT LOADED, NOT MAINTAINED. DO NOT READ THIS FILE AS GUIDANCE.**
+>
+> These are the original *Claude.ai project instructions* from before this skill was
+> packaged as the `appian-toolkit` plugin. The live, maintained entry point is
+> [`../SKILL.md`](../SKILL.md); the detailed rules live in `../ui-guidelines/`,
+> `../logic-guidelines/` and `../conversion-guidelines/`.
+>
+> **Why it moved here.** The file used to sit at `skills/appian-sail-generator/claude.md`.
+> On case-insensitive filesystems (Windows, macOS) Claude Code resolved that as a
+> `CLAUDE.md` and auto-injected all ~42 KB of it into context whenever *any* file in
+> this folder was read — including inside every validator subagent. Its guidance had
+> also drifted from `SKILL.md` (e.g. it tells you to skip the validator subagents when
+> an MCP `validate_sail` tool exists; `SKILL.md` Step 4 does not).
+>
+> Kept for historical reference only. Safe to delete.
+
+---
+
+# PROJECT INSTRUCTIONS - SAIL UI GENERATION (legacy Claude.ai version)
 
 ## PURPOSE AND GOALS
 - Given a request, generate an Appian SAIL UI mockup
