@@ -122,7 +122,7 @@ If categorisation is ambiguous (e.g. "a case management interface" — page or c
 
 **Why this is now trivial.** This skill ships inside the `appian-toolkit` plugin, which bundles the six validator/converter subagents (`sail-schema-validator`, `sail-icon-validator`, `sail-code-reviewer`, `sail-dynamic-converter`, `sail-interface-splitter`, `sail-validation-implementer`) at the plugin root, in `../../agents/`. **Claude Code discovers plugin agents automatically** — there is no install step, no copy into `~/.claude/agents/`, and no restart. Earlier versions of this skill needed `scripts/install_validators_to_user.py` because skill-bundled agents were not discoverable; packaging as a plugin removed that failure mode entirely.
 
-**When to skip.** Skip entirely in Claude.ai (no `Task` tool with `subagent_type` — nothing to check).
+**When to skip.** Skip entirely in Claude.ai (no `Agent` tool with `subagent_type` — nothing to check).
 
 **What to do:**
 
@@ -285,7 +285,7 @@ Mandatory loads, in order:
 
 #### Delegation
 
-Where sub-agent delegation is available (Claude Code via the `Task` tool), the generation work can be delegated. Otherwise follow the same instructions inline.
+Where sub-agent delegation is available (Claude Code via the `Agent` tool), the generation work can be delegated. Otherwise follow the same instructions inline.
 
 Mockup rules (the absolute floor — see `references/01-mockup-rules.md` for the full list):
 
@@ -330,11 +330,11 @@ Only run this when the user has explicitly asked for a functional/dynamic/data-d
    The `map_*` script produces one `data-model-context-<snake_case>.md` per record type; concatenate them into `context/data-model-context.md` if Phase 2 needs several record types.
 3. **User has neither markdown nor XMLs** — they need to provide the record-type names, field names + UUIDs, data types, and relationship names + UUIDs manually, or export the records from Appian first. **Do not invent UUIDs.** Stop and ask.
 
-**In Claude Code with `Task` tool available, delegate the conversion to the `sail-dynamic-converter` agent as a subagent — this is required, not optional.** Invocation:
+**In Claude Code with `Agent` tool available, delegate the conversion to the `sail-dynamic-converter` agent as a subagent — this is required, not optional.** Invocation:
 ```
-Task(subagent_type="sail-dynamic-converter", description="...", prompt="...")
+Agent(subagent_type="sail-dynamic-converter", description="...", prompt="...")
 ```
-If `sail-dynamic-converter` is not in your `subagent_type` list, run `/reload-plugins` (Step 0.4) so the appian-toolkit plugin registers all six bundled agents. **Do not fall back to inline execution when the subagent is merely unregistered.** In Claude.ai or any environment without the `Task` tool at all, then and only then, read `../../agents/sail-dynamic-converter.md` and follow its instructions yourself inline. Either way, the converter logic:
+If `sail-dynamic-converter` is not in your `subagent_type` list, run `/reload-plugins` (Step 0.4) so the appian-toolkit plugin registers all six bundled agents. **Do not fall back to inline execution when the subagent is merely unregistered.** In Claude.ai or any environment without the `Agent` tool at all, then and only then, read `../../agents/sail-dynamic-converter.md` and follow its instructions yourself inline. Either way, the converter logic:
 - Replaces `local!` arrays with `a!queryRecordType()` / `a!recordData()`.
 - Transforms form fields to `ri!` rule inputs (and matches process-model `process_variables` exactly when the interface is a start form with a `model.json` available).
 - Adds null-safe field-access patterns.
@@ -355,7 +355,7 @@ Detailed conversion playbook: `conversion-guidelines/CONVERSION-PRIMARY-REFERENC
 
 1. **Mode A — MCP `validate_sail`**. If `mcp__appian-mcp-server__validate_sail` is in your tool list (typical when on the Appian VPN in Claude Code), it's the highest-fidelity validator because the Appian server runs the same checks the Designer runs. **Always supplement with Mode B's icon + code-review passes** because the MCP validator focuses on grammar, not icon catalog presence or 14-category structural review.
 
-2. **Mode B — Subagent delegation via Task tool (this is the default in Claude Code)**. Required when (a) you have the `Task` tool and (b) `sail-schema-validator`, `sail-icon-validator`, `sail-code-reviewer` appear in your available `subagent_type` list. Spawn all three **in parallel in a single message** for efficiency. **This is non-negotiable when the agents are registered.**
+2. **Mode B — Subagent delegation via Agent tool (this is the default in Claude Code)**. Required when (a) you have the `Agent` tool and (b) `sail-schema-validator`, `sail-icon-validator`, `sail-code-reviewer` appear in your available `subagent_type` list. Spawn all three **in parallel in a single message** for efficiency. **This is non-negotiable when the agents are registered.**
 
    **Why exactly these three and not all six?** The validation gate runs *only* the three validation-purpose agents. The other three bundled agents (`sail-dynamic-converter`, `sail-interface-splitter`, `sail-validation-implementer`) have different triggers documented in their own workflow steps — running them at Step 4 would be incorrect:
    - `sail-dynamic-converter` belongs in **Step 3** (Phase 1 → Phase 2 conversion). Invoking it at validation time would attempt to convert a mockup that may not need conversion.
@@ -368,7 +368,7 @@ Detailed conversion playbook: `conversion-guidelines/CONVERSION-PRIMARY-REFERENC
 
    If the user cannot restart in the current session, the acceptable bridge is to spawn `general-purpose` Agent three times in parallel, each loaded with the corresponding `../../agents/sail-<role>.md` content as its prompt. This is functionally equivalent to Mode B and still beats Mode C.
 
-3. **Mode C — Inline self-validation (Claude.ai only, or any environment without `Task` tool at all)**. This is the only legitimate use of Mode C: when subagent delegation is **technically unavailable**, not when it's merely inconvenient. Follow `references/07-claude-ai-inline-validation.md` precisely. The agent files in `agents/*.md` are then read as instruction sheets and executed inline — this is slower and more error-prone than the subagent path because you are simultaneously the author and the reviewer of the SAIL, so blind spots persist.
+3. **Mode C — Inline self-validation (Claude.ai only, or any environment without `Agent` tool at all)**. This is the only legitimate use of Mode C: when subagent delegation is **technically unavailable**, not when it's merely inconvenient. Follow `references/07-claude-ai-inline-validation.md` precisely. The agent files in `agents/*.md` are then read as instruction sheets and executed inline — this is slower and more error-prone than the subagent path because you are simultaneously the author and the reviewer of the SAIL, so blind spots persist.
 
 **Common anti-pattern to avoid:** picking Mode C in Claude Code because "the inline scan is faster." Mode C in Claude Code is a regression from the available tooling — every time it's been chosen as a shortcut, real issues have leaked through (recent example: two invalid `icon: "close"` references that the icon-validator subagent flagged immediately on a cross-check against `rich-text-icon-aliases.md`, but that an inline scan declared OK from memory).
 
@@ -407,9 +407,9 @@ If any check fails, **fix and re-validate**. Do not present output to the user t
 
 Before sending the response to the user, answer each of these out loud (in your reasoning). Every answer must be "yes". If any is "no": go back and fix; do not present.
 
-0. **Validation mode honesty check.** Did I pick the highest mode actually available to me? Specifically: in Claude Code with the `Task` tool, did I delegate to the three sail-* subagents (Mode B), or did I fall through to Mode C without first checking that the appian-toolkit plugin is loaded? If the latter — STOP and go back to Step 0.4. Mode C in Claude Code is not an acceptable shortcut.
+0. **Validation mode honesty check.** Did I pick the highest mode actually available to me? Specifically: in Claude Code with the `Agent` tool, did I delegate to the three sail-* subagents (Mode B), or did I fall through to Mode C without first checking that the appian-toolkit plugin is loaded? If the latter — STOP and go back to Step 0.4. Mode C in Claude Code is not an acceptable shortcut.
 
-0a. **Subagent invocation evidence.** If I used Mode B, did I get three distinct reports back (one per validator) within this conversation? If I claim "Mode B" but cannot point to three actual `Task` tool invocations and their returned reports, that's a confabulation — go back and actually invoke them.
+0a. **Subagent invocation evidence.** If I used Mode B, did I get three distinct reports back (one per validator) within this conversation? If I claim "Mode B" but cannot point to three actual `Agent` tool invocations and their returned reports, that's a confabulation — go back and actually invoke them.
 
 1. Did I run all three inline validation passes (schema, icon, structural)?
 2. Are there zero invented UUIDs, record-type names, field names, or relationships in the file?
@@ -454,7 +454,7 @@ When in doubt about the cause, ask the user to share the exact error text rather
 
 ## Agents
 
-The skill ships **six** specialised agents in `agents/`. Each has its own detailed instructions; read the agent file when you invoke that role. In Claude Code, **all six MUST be invoked as native subagents** (`Task(subagent_type=...)`) when their trigger fires — never inline. The only exception is Claude.ai (no `Task` tool at all), where inline execution is the only option.
+The skill ships **six** specialised agents in `agents/`. Each has its own detailed instructions; read the agent file when you invoke that role. In Claude Code, **all six MUST be invoked as native subagents** (`Agent(subagent_type=...)`) when their trigger fires — never inline. The only exception is Claude.ai (no `Agent` tool at all), where inline execution is the only option.
 
 ### Unified trigger table — when does each agent fire?
 
@@ -472,21 +472,21 @@ The skill ships **six** specialised agents in `agents/`. Each has its own detail
 **Concrete invocation pattern** (Claude Code, Phase 1 → Phase 2 example):
 ```
 # Step 3 trigger fires (user said "now make it functional"):
-Task(subagent_type="sail-dynamic-converter", description="Convert mockup to functional", ...)
+Agent(subagent_type="sail-dynamic-converter", description="Convert mockup to functional", ...)
 
 # Step 4 trigger fires automatically after Step 3 produces output:
 [parallel in single message]
-Task(subagent_type="sail-schema-validator", ...)
-Task(subagent_type="sail-icon-validator", ...)
-Task(subagent_type="sail-code-reviewer", ...)
+Agent(subagent_type="sail-schema-validator", ...)
+Agent(subagent_type="sail-icon-validator", ...)
+Agent(subagent_type="sail-code-reviewer", ...)
 ```
 
 If any of these six is missing from your `subagent_type` list when its trigger fires, run **Step 0.4** (`/reload-plugins`) — the plugin ships all six. **Do not fall back to inline execution just because the subagent is unregistered.**
 
 **How agents are invoked depends on environment:**
 
-- **Claude Code with `Task` tool available** → invoke as proper sub-agents using `subagent_type: <agent-name>`. They run in isolation with their own context window. **This is the required mode in Claude Code** (Mode B in Step 4). The agents ship at the root of the appian-toolkit plugin and are auto-discovered by Claude Code — no install step. If they are not listed, ask the user to run `/reload-plugins`; do not fall back to inline validation.
-- **Claude.ai (this app) or any environment without the `Task` tool** → agents are **not delegable**. Treat the agent files in `../../agents/` as **instruction sheets that you read and execute inline yourself**. Do not announce "delegating to the sail-schema-validator" — that's a hallucinated tool call. Instead: open the agent file, read its instructions, and apply them to the file directly. Output that says "I delegated to X agent and it passed" without an actual `Task` tool call is invalid and will produce broken SAIL.
+- **Claude Code with `Agent` tool available** → invoke as proper sub-agents using `subagent_type: <agent-name>`. They run in isolation with their own context window. **This is the required mode in Claude Code** (Mode B in Step 4). The agents ship at the root of the appian-toolkit plugin and are auto-discovered by Claude Code — no install step. If they are not listed, ask the user to run `/reload-plugins`; do not fall back to inline validation.
+- **Claude.ai (this app) or any environment without the `Agent` tool** → agents are **not delegable**. Treat the agent files in `../../agents/` as **instruction sheets that you read and execute inline yourself**. Do not announce "delegating to the sail-schema-validator" — that's a hallucinated tool call. Instead: open the agent file, read its instructions, and apply them to the file directly. Output that says "I delegated to X agent and it passed" without an actual `Agent` tool call is invalid and will produce broken SAIL.
 
 In Claude.ai specifically, the validation workflow is the **inline three-pass protocol in Step 4 Mode C**, not subagent delegation.
 

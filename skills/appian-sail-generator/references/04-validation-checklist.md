@@ -16,9 +16,9 @@ If `mcp__appian-mcp-server__validate_sail` is in your tool list (typically when 
 
 ## No-MCP paths — pick based on environment
 
-### Path A — Claude Code with `Task` tool (subagent delegation available)
+### Path A — Claude Code with `Agent` tool (subagent delegation available)
 
-Run the three validator agents in order via `Task` calls, stopping at first failure:
+Run the three validator agents in order via `Agent` calls, stopping at first failure:
 
 1. **`sail-schema-validator`** — verifies every function exists, every parameter exists for that function, and every enumerated value is in the function's `validValues` list. Schemas live at `ui-guidelines/reference/schemas/*.json`. The agent is exhaustive (every single value checked, no sampling) — see `agents/sail-schema-validator.md`.
 
@@ -26,7 +26,7 @@ Run the three validator agents in order via `Task` calls, stopping at first fail
 
 3. **`sail-code-reviewer`** — verifies structural and stylistic rules: nesting, null safety, `fv!` context, type handling, layout hierarchy. See `agents/sail-code-reviewer.md`.
 
-### Path B — Claude.ai (or any env without `Task` tool) — INLINE three-pass scan
+### Path B — Claude.ai (or any env without `Agent` tool) — INLINE three-pass scan
 
 **This is the default for Claude.ai. Do not pretend to delegate to subagents — that's a hallucinated tool call.** Read each agent file and apply its instructions yourself. Full inline protocol: `references/07-claude-ai-inline-validation.md`.
 

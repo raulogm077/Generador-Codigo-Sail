@@ -1,6 +1,6 @@
 # Claude.ai Inline Validation Protocol — No Subagents
 
-This file is the canonical playbook for validating generated SAIL **when running in Claude.ai (or any other environment without the `Task` tool)**. In those environments, the agents in `agents/` are not delegable — they are instruction sheets you read and execute yourself.
+This file is the canonical playbook for validating generated SAIL **when running in Claude.ai (or any other environment without the `Agent` tool)**. In those environments, the agents in `agents/` are not delegable — they are instruction sheets you read and execute yourself.
 
 In Claude Code with subagents available, prefer the proper delegation path described in `SKILL.md` Step 4 Mode B. This file is for everything else.
 

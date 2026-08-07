@@ -739,7 +739,7 @@ STEP 2: THEN invoke sail-dynamic-converter agent
   - Converting static/mock interfaces to use live record data
   - Making mockups dynamic or connecting to real data
   - Using actual data from record types
-- [ ] Use Task tool: `subagent_type: "sail-dynamic-converter"`
+- [ ] Use Agent tool: `subagent_type: "sail-dynamic-converter"`
 
 **❌ NEVER:**
 - Attempt conversion yourself without invoking the agent

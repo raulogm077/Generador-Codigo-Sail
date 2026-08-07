@@ -2,7 +2,7 @@
 
 This folder ships four utilities:
 
-- **`install_validators_to_user.py`** ⭐ NEW in v2.2 — installs the skill's validator subagents into `~/.claude/agents/` so Claude Code can invoke them via the `Task` tool. **Run once per Claude Code installation** (the skill's Step 0.4 invokes it automatically when needed).
+- **`install_validators_to_user.py`** ⭐ NEW in v2.2 — installs the skill's validator subagents into `~/.claude/agents/` so Claude Code can invoke them via the `Agent` tool. **Run once per Claude Code installation** (the skill's Step 0.4 invokes it automatically when needed).
 - **`sync-agents.py`** — keeps the skill's own `/agents/` and `/.claude/agents/` in lockstep (skill maintenance, for editors of the skill).
 - **`xml_to_appian_recordtype_md.py`** — converts a single `recordTypeHaul` XML to data-model-context markdown (Phase 2 prep).
 - **`map_xml_to_appian_recordtype_md.py`** — same conversion at scale (folder of XMLs or zipped application export).
