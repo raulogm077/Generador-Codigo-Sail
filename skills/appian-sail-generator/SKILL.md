@@ -49,14 +49,17 @@ Appian Cloud releases monthly (26.1, 26.2, …). The bundled schemas were re-ver
 
 At **Step 0.5 (pre-flight)**, check whether `<working-dir>/.claude/appian-toolkit.local.md` exists. If it does, parse its YAML frontmatter and honor these fields for the whole session. If it doesn't, use the defaults silently — never ask the user to create it.
 
+> **This table is the authoritative schema for the file.** It covers every field, including ones this skill does not itself use. `examples/appian-toolkit.local.md.example` and the plugin README show samples and must not be treated as the field list — when they disagree with this table, this table wins. Add new fields here first.
+
 | Field | Effect | Default when absent |
 |---|---|---|
-| `enabled` | `false` → ignore the whole file | `true` |
+| `enabled` | `false` → ignore the whole file, frontmatter **and** body, exactly as if it were absent. This is the project's off switch for the **entire toolkit**, not just this skill: `sail-dynamic-converter`, `sail-code-reviewer` and `appian-reverse-engineering` each re-read this file in their own context and must all check `enabled` before anything else. A switch that leaves some fields applied is not a switch. | `true` |
 | `brand_hex` / `brand_hex_soft` | Project's corporate palette. Use the HEX (never `"ACCENT"`) on `a!buttonWidget.color`, `a!tagItem.backgroundColor`, `a!tabLayout.highlightColor`, `a!stampField.backgroundColor`, `a!cardLayout.decorativeBarColor`, etc. A reference image provided in the request still wins (Step 0.6 extraction). | `null` → Step 0.6 extraction, else `"ACCENT"` |
 | `data_model_context` | Path (relative to working dir) of the Phase-2 data-model markdown | `context/data-model-context.md` |
 | `output_dir` | Where generated `.sail` files are written | `output` |
 | `ai_components_available` | `false` → NEVER generate `a!chatField` / `a!chatMessage` / `a!callLanguageModel` / `a!agentChatField` (environment lacks the advanced/premium AI tier). Validators treat their presence as a blocking error. | `true` |
 | `prefer_native_kpis` | Phase 2: convert card KPIs to `a!kpiField` whenever Pattern 0's decision rule allows it (`display-conversion-kpis.md`) | `true` |
+| `re_depth` | **Not used by this skill** — honored by `appian-reverse-engineering`, which takes it as the documentation depth (`onboarding` \| `rebuild`) and then does **not** ask. Listed here because this table is the schema for the whole file. | *(unset)* → the skill asks |
 
 The markdown **body** of the file is free-form project context (environment name, constraints, verified-capability notes) — read it and respect it. Do **not** store Appian version numbers in the frontmatter (no version pinning in configs; verify feature availability at generation time via `appian-docs` or `appian-dev validateExpression`). Template: `examples/appian-toolkit.local.md.example`. The file is user-local: when the project uses git, `.claude/*.local.md` belongs in `.gitignore`.
 

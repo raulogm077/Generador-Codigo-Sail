@@ -138,20 +138,36 @@ python -m unittest discover tests -v    # gates de reingeniería inversa (solo s
 
 ## Settings por proyecto (opcional)
 
-Crea `.claude/appian-toolkit.local.md` en tu proyecto — plantilla en [`skills/appian-sail-generator/examples/appian-toolkit.local.md.example`](skills/appian-sail-generator/examples/appian-toolkit.local.md.example):
+Crea `.claude/appian-toolkit.local.md` en tu proyecto. Copia entera lista para pegar: [`appian-toolkit.local.md.example`](skills/appian-sail-generator/examples/appian-toolkit.local.md.example).
+
+Muestra **abreviada**, solo para que veas la pinta:
 
 ```markdown
 ---
-brand_hex: "#0050A0"            # paleta corporativa (HEX, nunca "ACCENT")
+enabled: true                    # false → el toolkit ignora el fichero entero
+brand_hex: "#0050A0"             # paleta corporativa (HEX, nunca "ACCENT")
 data_model_context: "context/data-model-context.md"
 output_dir: "output"
 ai_components_available: true    # false → nunca genera a!chatField/a!callLanguageModel
 prefer_native_kpis: true         # Fase 2: a!kpiField nativo cuando aplica
+re_depth: "onboarding"           # reingeniería inversa: onboarding | rebuild
 ---
 # Notas libres del proyecto (entorno, convenciones…)
 ```
 
-Es un fichero local del proyecto (excluido por `.gitignore`), leído en el pre-flight de cada generación.
+**El esquema completo —todos los campos, sus efectos y sus defaults— vive en un único sitio:** [`skills/appian-sail-generator/SKILL.md`](skills/appian-sail-generator/SKILL.md) § *Per-project settings*. Lo de arriba es una muestra, no la lista de campos; si alguna vez discrepan, manda la tabla.
+
+Todos los campos son opcionales: borra una línea y vuelve a su default. Si el fichero no existe, el toolkit usa los defaults en silencio y no te pide que lo crees.
+
+**Añádelo a tu `.gitignore`**, no viene excluido de fábrica:
+
+```gitignore
+.claude/*.local.md
+```
+
+(El `.gitignore` de *este* repo excluye ese patrón, pero eso protege al plugin, no a tu proyecto.)
+
+Se lee en el pre-flight de cada generación, así que **editarlo surte efecto en la siguiente sin reiniciar** Claude Code — el plugin no trae hooks, que son los que sí exigirían reinicio.
 
 ---
 

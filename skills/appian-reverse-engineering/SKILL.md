@@ -131,7 +131,8 @@ El modo B multiplica tiempo y tokens (una ficha por interfaz)."
 **Reglas duras:**
 - **No asumas.** Sin respuesta explícita → solo Markdown y `profundidad: onboarding`.
 - **Confirma coste** si la app es grande (más de 50 PMs o más de 100 interfaces): PDF/Dashboard añaden 30-90s y tokens extra; el modo `rebuild` puede multiplicar por 3-5 el trabajo total.
-- Si el proyecto tiene `.claude/appian-toolkit.local.md` con `re_depth:`, úsalo como default **sin preguntar** la profundidad.
+- Si el proyecto tiene `.claude/appian-toolkit.local.md`, **mira `enabled` antes que nada**: con `enabled: false` ignora el fichero entero — ni `re_depth` ni el cuerpo — y pregunta la profundidad como si no existiera. Es el interruptor de apagado del toolkit para ese proyecto; si `re_depth` siguiera aplicándose, el interruptor no apagaría.
+- Si está habilitado y trae `re_depth:` (`onboarding` | `rebuild`), úsalo como default **sin preguntar** la profundidad. Esquema completo del fichero, con todos los campos y sus defaults: `../appian-sail-generator/SKILL.md` § *Per-project settings*.
 - Guarda elección en `_intermedio/output_preferences.json`:
   ```json
   { "markdown": true, "pdf": false, "dashboard": false, "depth": "onboarding", "askedAt": "{ISO}" }
