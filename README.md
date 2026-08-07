@@ -64,7 +64,17 @@ Uso: *"Documenta esta aplicación: ./exports/MiApp/"* — o pide directamente *"
 
 ---
 
-## 3 · Análisis funcional — agente `appian-functional-analyst`
+## 3 · Validación y preview local — skill `run-appian-sail-generator`
+
+Comprueba un `.sail` ya generado **sin salir del editor y sin conexión a Appian**: balanceo de llaves, paréntesis y comillas, cadenas y comentarios sin cerrar, e inventario de identificadores con namespace (`a!`, `ri!`, `rule!`, `cons!`, `recordType!`). Después renderiza un preview HTML con resaltado de sintaxis en tema oscuro y lo abre en el navegador.
+
+Es un gate barato *previo* a los tres subagentes validadores: pilla los errores tipográficos en segundos. Requiere Node.js; el driver es `skills/run-appian-sail-generator/driver.mjs`.
+
+Uso: *"valida output/mi-pantalla.sail"* o *"ábreme el preview de este .sail"*.
+
+---
+
+## 4 · Análisis funcional — agente `appian-functional-analyst`
 
 Transforma información dispersa (transcripciones de reuniones, correos del cliente, notas informales, capturas) en entregables funcionales estructurados con vocabulario Appian: requisitos con huecos detectados, especificaciones de pantalla (componentes, acciones, reglas de comportamiento), procesos de negocio e historias de usuario con criterios de aceptación en Gherkin.
 
@@ -86,25 +96,43 @@ Transforma información dispersa (transcripciones de reuniones, correos del clie
 
 ## Instalación
 
-```bash
-claude plugin marketplace add raulogm077/Appian-Toolkit
-```
+**Opción A — desde el marketplace** (recomendada para usarlo):
 
 ```bash
+claude plugin marketplace add raulogm077/Appian-Toolkit
 claude plugin install appian-toolkit@appian-toolkit
 ```
 
-O clonando y cargando directamente:
+**Opción B — clonado en el directorio de skills** (recomendada para desarrollarlo). Claude Code carga automáticamente como plugin cualquier carpeta de `~/.claude/skills/` que tenga `.claude-plugin/plugin.json`; aparece como `appian-toolkit@skills-dir` y los cambios se recogen en la siguiente sesión, sin reinstalar:
+
+```bash
+git clone https://github.com/raulogm077/Appian-Toolkit.git ~/.claude/skills/appian-toolkit
+```
+
+**Opción C — sesión suelta**, sin instalar nada:
 
 ```bash
 git clone https://github.com/raulogm077/Appian-Toolkit.git
-```
-
-```bash
 claude --plugin-dir ./Appian-Toolkit
 ```
 
-**Requisitos**: Claude Code. Opcionales: Python 3.8+ (scripts de conversión de exports), MCP `appian-docs` (consultar documentación oficial en vivo) y un MCP de Appian con `validateExpression` (validar contra tu entorno real).
+**Comprobar que ha cargado** (debe decir 3 skills y 7 agentes):
+
+```bash
+claude plugin list      # appian-toolkit ... Status: loaded / enabled
+claude plugin details appian-toolkit
+```
+
+Si un subagente no aparece en tu lista de `subagent_type`, ejecuta `/reload-plugins` o reinicia Claude Code. **No copies los ficheros de `agents/` a `~/.claude/agents/` a mano**: crearías una segunda copia que va por su cuenta y tapa a la del plugin.
+
+**Requisitos**: Claude Code. Opcionales: Python 3.8+ (scripts de conversión de exports y tests), Node.js (skill de preview), MCP `appian-docs` (consultar documentación oficial en vivo) y un MCP de Appian con `validateExpression` (validar contra tu entorno real).
+
+### Desarrollo
+
+```bash
+claude plugin validate . --strict       # valida plugin.json y marketplace.json
+python -m unittest discover tests -v    # gates de reingeniería inversa (solo stdlib)
+```
 
 ---
 
@@ -146,7 +174,15 @@ skills/
                               guías de layouts/componentes/lógica/conversión · scripts · ejemplos
   appian-reverse-engineering/ SKILL.md · 9 agentes internos · plantillas de los 11 documentos
                               reglas de seguridad/enmascarado · scripts (BPMN, secretos)
+  run-appian-sail-generator/  SKILL.md · driver.mjs (validación sintáctica + preview HTML)
+tests/                        pytest de los gates de reingeniería inversa + fixture mini-export
+docs/plans/                   planes y actas de auditoría (histórico, no se carga en runtime)
 ```
+
+**Dos niveles de agentes, y no son lo mismo:**
+
+- Los **7 de `agents/`** son subagentes nativos del plugin: Claude Code los descubre solo y se invocan con `subagent_type`. No hay paso de instalación.
+- Los **9 de `skills/appian-reverse-engineering/agents/`** son *plantillas de prompt*, no agentes registrados: la skill los lee y los pasa como `prompt` a un `general-purpose`. Así el pipeline funciona igual en Claude.ai, donde no hay registro de subagentes, y no ocupan sitio en el contexto de cada sesión.
 
 ---
 

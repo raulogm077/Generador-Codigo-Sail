@@ -1,0 +1,18 @@
+# Normaliza finales de linea: LF en el repo, nativo en el working tree.
+# Sin esto, editar en Windows mete CRLF en ficheros que Claude Code y los
+# scripts Python leen, y cada commit ensucia el diff entero.
+* text=auto
+
+# Ficheros que deben ser LF siempre, tambien en el working tree de Windows
+# (los .sh los ejecuta bash; CRLF los rompe con "bad interpreter").
+*.sh   text eol=lf
+*.py   text eol=lf
+*.mjs  text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+
+# Binarios / no diffear
+*.png  binary
+*.jpg  binary
+*.pdf  binary
+*.zip  binary
