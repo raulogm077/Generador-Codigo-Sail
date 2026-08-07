@@ -1,0 +1,15 @@
+# Todo el repo es LF, en el indice y en el working tree, tambien en Windows.
+#
+# Sin esto git aplica `core.autocrlf` y al hacer checkout en Windows convierte
+# a CRLF: el working tree entero sale "modificado" y cada commit arrastra
+# ruido de finales de linea. Ademas los .sh con CRLF fallan al ejecutarse
+# ("bad interpreter"), y ni Claude Code ni los scripts Python necesitan CRLF.
+* text=auto eol=lf
+
+# Binarios: ni normalizar ni diffear
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.svg -text

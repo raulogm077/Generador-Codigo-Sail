@@ -2,7 +2,7 @@
 
 > **Parent guide:** `/logic-guidelines/LOGIC-PRIMARY-REFERENCE.md`
 >
-> **Referenced from:** `claude.md` → "CAPTURING USER REQUIREMENTS IN GENERATED CODE"
+> **Referenced from:** `SKILL.md` → Phase 4, "Capturing user requirements in generated code"
 
 When generating SAIL interfaces from requirements, add structured comments that capture business logic, validation rules, and design decisions. This creates self-documenting code that helps developers understand the "why" behind implementation choices.
 

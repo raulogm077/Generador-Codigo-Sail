@@ -1,63 +1,34 @@
 # Scripts
 
-This folder ships four utilities:
+This folder ships two utilities:
 
-- **`install_validators_to_user.py`** ⭐ NEW in v2.2 — installs the skill's validator subagents into `~/.claude/agents/` so Claude Code can invoke them via the `Agent` tool. **Run once per Claude Code installation** (the skill's Step 0.4 invokes it automatically when needed).
-- **`sync-agents.py`** — keeps the skill's own `/agents/` and `/.claude/agents/` in lockstep (skill maintenance, for editors of the skill).
 - **`xml_to_appian_recordtype_md.py`** — converts a single `recordTypeHaul` XML to data-model-context markdown (Phase 2 prep).
 - **`map_xml_to_appian_recordtype_md.py`** — same conversion at scale (folder of XMLs or zipped application export).
 
 ---
 
-## `install_validators_to_user.py` — register validator subagents with Claude Code
+## Where the subagents live (no install step)
 
-Claude Code discovers sub-agents from the user's `~/.claude/agents/` directory, NOT from inside a plugin's bundle. When this skill is installed via the plugin system, its `agents/*.md` files are not addressable as `subagent_type: sail-schema-validator` until they're copied to the user-level registry.
-
-This script does that copy. It's idempotent, cross-platform (Windows / macOS / Linux), and only touches files prefixed with `sail-` so the user's other custom agents are preserved.
-
-```bash
-# Install / update (default action)
-python scripts/install_validators_to_user.py
-
-# Just check status, don't modify anything
-python scripts/install_validators_to_user.py --check --verbose
-
-# Uninstall (removes only sail-* files; leaves the user's other agents alone)
-python scripts/install_validators_to_user.py --remove
-```
-
-**After install, the user MUST restart Claude Code** (or run `/restart`) for the new sub-agents to appear in the runtime's subagent registry.
-
-**The skill's `SKILL.md` Step 0.4 invokes this script automatically on first SAIL generation in a fresh environment.** If you're hand-editing or testing the skill, run it once manually.
-
-Exit codes:
-- `0` — installed/up-to-date (or status OK in `--check` mode)
-- `1` — drift detected (only in `--check` mode)
-- `2` — source agents folder missing
-- `3` — permission denied writing to `~/.claude/agents/`
-
----
-
-## `sync-agents.py` — keep duplicated agent files in sync (skill maintenance)
-
-The skill keeps two copies of every agent instruction file:
-- `/agents/*.md` — the canonical location (read inline by Claude.ai).
-- `/.claude/agents/*.md` — discovery location inside the skill bundle (NOT the same as the user-level `~/.claude/agents/`, which is what `install_validators_to_user.py` populates).
-
-**Edit only `/agents/`, then run this script to propagate.**
+The six validator/converter subagents are **not** in this folder and need no installation.
+They ship at the plugin root, in [`agents/`](../../../agents/), and Claude Code discovers
+plugin agents automatically — they are addressable as `subagent_type: sail-schema-validator`
+and friends as soon as the plugin loads. Verify with:
 
 ```bash
-# Sync (writes if changed)
-python scripts/sync-agents.py
-
-# CI / pre-commit check (exits non-zero if out of sync; does not modify)
-python scripts/sync-agents.py --check
+claude plugin details appian-toolkit    # should list 7 agents
 ```
 
-The script is cross-platform (no symlinks; works on Windows). Exit codes:
-- `0` — in sync (or sync applied successfully)
-- `1` — out of sync (only in `--check` mode)
-- `2` — missing source directory
+Two scripts used to exist here for this and were removed in v2.6.0:
+
+- `install_validators_to_user.py` copied the agents into `~/.claude/agents/`. That was
+  needed when this was a standalone skill; as a plugin it is not, and running it now
+  creates a second, shadowing copy of every `sail-*` agent that drifts from the plugin's.
+- `sync-agents.py` mirrored `agents/` into a bundled `.claude/agents/` copy. Claude Code
+  never discovered that copy, its source directory no longer existed (the script failed
+  outright), and the two sets had already diverged.
+
+If a subagent is missing from your `subagent_type` list, the fix is `/reload-plugins`
+or restarting Claude Code — see `SKILL.md` Step 0.4. Never copy agent files by hand.
 
 ---
 

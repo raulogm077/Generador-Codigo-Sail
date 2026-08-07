@@ -120,7 +120,7 @@ If categorisation is ambiguous (e.g. "a case management interface" — page or c
 
 ### ⚙️ Step 0.4 — Subagent availability check (Claude Code only, no install needed)
 
-**Why this is now trivial.** This skill ships inside the `appian-toolkit` plugin, which bundles the six validator/converter subagents (`sail-schema-validator`, `sail-icon-validator`, `sail-code-reviewer`, `sail-dynamic-converter`, `sail-interface-splitter`, `sail-validation-implementer`) at the plugin root, in `../../agents/`. **Claude Code discovers plugin agents automatically** — there is no install step, no copy into `~/.claude/agents/`, and no restart. Earlier versions of this skill needed `scripts/install_validators_to_user.py` because skill-bundled agents were not discoverable; packaging as a plugin removed that failure mode entirely.
+**Why this is now trivial.** This skill ships inside the `appian-toolkit` plugin, which bundles the six validator/converter subagents (`sail-schema-validator`, `sail-icon-validator`, `sail-code-reviewer`, `sail-dynamic-converter`, `sail-interface-splitter`, `sail-validation-implementer`) at the plugin root, in `../../agents/`. **Claude Code discovers plugin agents automatically** — there is no install step, no copy into `~/.claude/agents/`, and no restart. Earlier versions of this skill shipped an installer script that copied the agents into `~/.claude/agents/`, because skill-bundled agents were not discoverable; packaging as a plugin removed that failure mode entirely, and the script was deleted in v2.6.0. **Never copy agent files by hand** — a user-level copy shadows the plugin's and then drifts from it.
 
 **When to skip.** Skip entirely in Claude.ai (no `Agent` tool with `subagent_type` — nothing to check).
 
@@ -454,7 +454,7 @@ When in doubt about the cause, ask the user to share the exact error text rather
 
 ## Agents
 
-The skill ships **six** specialised agents in `agents/`. Each has its own detailed instructions; read the agent file when you invoke that role. In Claude Code, **all six MUST be invoked as native subagents** (`Agent(subagent_type=...)`) when their trigger fires — never inline. The only exception is Claude.ai (no `Agent` tool at all), where inline execution is the only option.
+The skill ships **six** specialised agents at the plugin root, in `../../agents/`. Each has its own detailed instructions; read the agent file when you invoke that role. In Claude Code, **all six MUST be invoked as native subagents** (`Agent(subagent_type=...)`) when their trigger fires — never inline. The only exception is Claude.ai (no `Agent` tool at all), where inline execution is the only option.
 
 ### Unified trigger table — when does each agent fire?
 
@@ -504,7 +504,7 @@ The bundled guideline files were authored with absolute-looking paths such as `/
 
 | File | Purpose |
 |---|---|
-| `references/01-mockup-rules.md` | Condensed list of the must-never / must-always rules for Phase 1 mockups. Read at the start of Phase 1 if you don't have `claude.md`'s rules in context. |
+| `references/01-mockup-rules.md` | Condensed list of the must-never / must-always rules for Phase 1 mockups. Read at the start of Phase 1 — it is the canonical short form of the mockup rules. |
 | `references/02-conversion-workflow.md` | High-level Phase 2 playbook with decision points. Use alongside `conversion-guidelines/CONVERSION-PRIMARY-REFERENCE.md`. |
 | `references/03-data-model-context-format.md` | What the `data-model-context.md` file must look like, with examples, and how to generate it from `recordTypeHaul` XML. |
 | `references/04-validation-checklist.md` | Universal validation checklist to run before declaring output done. |
