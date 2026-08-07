@@ -80,6 +80,26 @@ Options:
 Output filenames follow the pattern `data-model-context-<record_name_snake_case>.md`,
 one file per record type.
 
+## Exit codes — a record type with zero fields is an error, not a result
+
+Both scripts refuse to write a `data-model-context` with an empty field table.
+Phase 2 cannot tell "this record type has no fields" apart from "the parse
+failed", so silence there turns into invented or missing field references later.
+
+| Code | `xml_to_…` | `map_xml_to_…` |
+|---|---|---|
+| `0` | markdown written | every XML written |
+| `1` | **no field parsed** — nothing written, reason on stderr | at least one XML yielded zero fields; the good ones are still written, the offenders are listed on stderr |
+| — | `ValueError` if the XML has no `<recordType>` at all | that file is reported as `FAIL:` and counts toward exit `1` |
+
+Both field shapes are accepted, with or without XML namespaces: child elements
+(`<field><fieldName>…</fieldName><uuid>…</uuid></field>`, what a real export
+emits) and attributes (`<field name="…" uuid="…" type="…"/>`, what hand-written
+and simplified XML tends to use). The child element wins when both are present.
+
+Covered by `tests/test_xml_to_recordtype.py` — including the negative cases, so
+the gate is known to be able to fail.
+
 ## Folder convention
 
 - `recordtype-xml/` — drop the raw XMLs here (this folder is a convention from
