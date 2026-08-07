@@ -1,18 +1,15 @@
-# Normaliza finales de linea: LF en el repo, nativo en el working tree.
-# Sin esto, editar en Windows mete CRLF en ficheros que Claude Code y los
-# scripts Python leen, y cada commit ensucia el diff entero.
-* text=auto
+# Todo el repo es LF, en el indice y en el working tree, tambien en Windows.
+#
+# Sin esto git aplica `core.autocrlf` y al hacer checkout en Windows convierte
+# a CRLF: el working tree entero sale "modificado" y cada commit arrastra
+# ruido de finales de linea. Ademas los .sh con CRLF fallan al ejecutarse
+# ("bad interpreter"), y ni Claude Code ni los scripts Python necesitan CRLF.
+* text=auto eol=lf
 
-# Ficheros que deben ser LF siempre, tambien en el working tree de Windows
-# (los .sh los ejecuta bash; CRLF los rompe con "bad interpreter").
-*.sh   text eol=lf
-*.py   text eol=lf
-*.mjs  text eol=lf
-*.md   text eol=lf
-*.json text eol=lf
-
-# Binarios / no diffear
-*.png  binary
-*.jpg  binary
-*.pdf  binary
-*.zip  binary
+# Binarios: ni normalizar ni diffear
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.svg -text
