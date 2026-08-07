@@ -454,7 +454,7 @@ When in doubt about the cause, ask the user to share the exact error text rather
 
 ## Agents
 
-The skill ships **six** specialised agents in `agents/`. Each has its own detailed instructions; read the agent file when you invoke that role. In Claude Code, **all six MUST be invoked as native subagents** (`Agent(subagent_type=...)`) when their trigger fires — never inline. The only exception is Claude.ai (no `Agent` tool at all), where inline execution is the only option.
+The skill ships **six** specialised agents at the plugin root, in `../../agents/`. Each has its own detailed instructions; read the agent file when you invoke that role. In Claude Code, **all six MUST be invoked as native subagents** (`Agent(subagent_type=...)`) when their trigger fires — never inline. The only exception is Claude.ai (no `Agent` tool at all), where inline execution is the only option.
 
 ### Unified trigger table — when does each agent fire?
 

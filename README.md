@@ -1,6 +1,6 @@
 # Appian Toolkit
 
-Plugin de [Claude Code](https://claude.com/claude-code) que convierte a Claude en un asistente de desarrollo Appian con tres capacidades: **generar interfaces SAIL validadas** (de mockup a funcional conectada al Data Fabric), **documentar aplicaciones heredadas** por reingeniería inversa de sus exports, y **estructurar análisis funcional** a partir de requisitos dispersos.
+Plugin de [Claude Code](https://claude.com/claude-code) que convierte a Claude en un asistente de desarrollo Appian con cuatro capacidades: **generar interfaces SAIL validadas** (de mockup a funcional conectada al Data Fabric), **documentar aplicaciones heredadas** por reingeniería inversa de sus exports, **validar y previsualizar** un `.sail` en local, y **estructurar análisis funcional** a partir de requisitos dispersos.
 
 Los schemas SAIL del plugin están **sincronizados con Appian 26.x** y verificados contra la documentación oficial (no contra la memoria del modelo).
 
